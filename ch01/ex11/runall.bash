@@ -1,1 +1,1 @@
-go run main.go http://gopl.io https://golang.org
+go run main.go http://gopl.io http://google.com http://Baidu.com http://Google.co.in http://Tmall.com http://sohu.com http://live.com http://vk.com http://Instagram.com http://sina.com.cn http://360.cn http://jd.com http://google.de https://www.yandex.ru/

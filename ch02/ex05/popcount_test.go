@@ -5,19 +5,39 @@ import (
 )
 
 func TestPopCount(t *testing.T) {
-	PopCount(0x1234567890ABCDEF)
+	want := 32
+	result := PopCount(0x1234567890ABCDEF)
+
+	if want != result {
+		t.Errorf("want = %v, result = %v", want, result)
+	}
 }
 
 func TestPopCountByLoop(t *testing.T) {
-	PopCountByLoop(0x1234567890ABCDEF)
+	want := 32
+	result := PopCountByLoop(0x1234567890ABCDEF)
+
+	if want != result {
+		t.Errorf("want = %v, result = %v", want, result)
+	}
 }
 
 func TestPopCountByBitshift(t *testing.T) {
-	PopCountByBitshift(0x1234567890ABCDEF)
+	want := 32
+	result := PopCountByBitshift(0x1234567890ABCDEF)
+
+	if want != result {
+		t.Errorf("want = %v, result = %v", want, result)
+	}
 }
 
 func TestPopCountByBitclear(t *testing.T) {
-	PopCountByBitclear(0x1234567890ABCDEF)
+	want := 32
+	result := PopCountByBitshift(0x1234567890ABCDEF)
+
+	if want != result {
+		PopCountByBitclear(0x1234567890ABCDEF)
+	}
 }
 
 func BenchmarkPopCount(b *testing.B) {

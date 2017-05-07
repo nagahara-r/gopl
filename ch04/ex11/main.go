@@ -102,7 +102,7 @@ func editBody(inputText string) (outputText string, err error) {
 	file, err := os.Create("description.txt")
 	_, err = file.Write([]byte(inputText))
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	cmd := exec.Command("vim", "description.txt")

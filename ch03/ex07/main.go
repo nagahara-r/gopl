@@ -1,4 +1,4 @@
-// Quatic Root は4乗根を求めます。
+// Newton fractal
 package main
 
 import (

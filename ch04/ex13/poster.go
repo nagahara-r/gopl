@@ -51,6 +51,15 @@ func Parse(data []byte) (omdb OMDB, err error) {
 	return omdb, err
 }
 
+// GetPoster はOMDBが提供するPosterをByteスライスで入手します。
+func GetPoster(url string) (data []byte, err error) {
+	if url == "N/A" {
+		return nil, fmt.Errorf("No Poster Found")
+	}
+
+	return Get(url)
+}
+
 // Get はURLをByteスライスで入手します。
 func Get(url string) (data []byte, err error) {
 	resp, err := http.Get(url)
@@ -80,7 +89,11 @@ func main() {
 		log.Printf("%v", omdb.Error)
 		return
 	}
-	posterData, err := Get(omdb.Poster)
+	posterData, err := GetPoster(omdb.Poster)
+	if err != nil {
+		log.Fatalf(err.Error())
+		return
+	}
 
 	os.Stdout.Write(posterData)
 }

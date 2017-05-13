@@ -27,7 +27,7 @@ func getPointer(addr *[]int, suffix int) (result *int) {
 
 	// 1. インデックス分の移動 -> index = suffix * memAlign
 	// 2. 配列のアドレスへ足し算 address = uip + index
-	// 3. unsafe.Pointer化 unsp = unsafe.Pointer(address)
-	// 4. int アドレス型にキャスト return (*int)(unsp)
+	// 3. unsafe.Pointer化（しないと次のキャストができない） unsp = unsafe.Pointer(address)
+	// 4. int ポインタ型にキャスト return (*int)(unsp)
 	return (*int)(unsafe.Pointer(uip + uintptr(suffix*intSize)))
 }

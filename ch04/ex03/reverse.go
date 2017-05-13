@@ -21,13 +21,13 @@ func reverse(s *[]int, l int) {
 }
 
 // getPointer は*[]intで指定された配列の要素をintポインタにして返します。
-func getPointer(addr *[]int, suffix int) (result *int) {
+func getPointer(addr *[]int, index int) (result *int) {
 	// unsafe.Pointer にして、アドレスを足し算可能なように uintptr にキャスト
 	uip := uintptr(unsafe.Pointer(addr))
 
-	// 1. インデックス分の移動 -> index = suffix * memAlign
-	// 2. 配列のアドレスへ足し算 address = uip + index
+	// 1. インデックス分の移動 -> indexAddress = index * memAlign
+	// 2. 配列のアドレスへ足し算 address = uip + indexAddress
 	// 3. unsafe.Pointer化（しないと次のキャストができない） unsp = unsafe.Pointer(address)
 	// 4. int ポインタ型にキャスト return (*int)(unsp)
-	return (*int)(unsafe.Pointer(uip + uintptr(suffix*intSize)))
+	return (*int)(unsafe.Pointer(uip + uintptr(index*intSize)))
 }

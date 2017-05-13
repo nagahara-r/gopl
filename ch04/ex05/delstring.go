@@ -5,7 +5,7 @@ package delstring
 
 import "log"
 
-// DeleteSideDuplicate は
+// DeleteSideDuplicate は隣り合う文字列が一致した場合にスライス内で除去します。
 func DeleteSideDuplicate(strs []string) []string {
 	detect := false
 

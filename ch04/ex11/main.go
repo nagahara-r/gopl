@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 
@@ -16,12 +17,28 @@ import (
 )
 
 func main() {
+	u := flag.String("u", "", "[Required] Github User ID")
+	r := flag.String("r", "", "[Required] Github Repository")
+
 	c := flag.Bool("c", false, "Create Mode")
-	r := flag.Bool("r", false, "Read Mode")
-	u := flag.Bool("u", false, "Update Mode")
+	re := flag.Bool("re", false, "Read Mode")
+	e := flag.Bool("e", false, "Edit Mode")
 	cl := flag.Bool("cl", false, "Close Mode")
 	n := flag.Int("n", -1, "Issue Number (Ignore in Create Mode)")
 	flag.Parse()
+
+	if *u == "" || *r == "" {
+		flag.Usage()
+		return
+	}
+
+	github.SetGithubUser(*u)
+	github.SetRepository(*r)
+
+	if !*c && !*re && !*e && !*cl {
+		flag.Usage()
+		return
+	}
 
 	item := github.Issue{}
 
@@ -30,7 +47,7 @@ func main() {
 		fmt.Printf("Title: ")
 		scanner := bufio.NewScanner(os.Stdin)
 		if !scanner.Scan() {
-			fmt.Errorf("Title Error")
+			log.Fatalf("Title Error")
 		}
 
 		item.Title = scanner.Text()
@@ -43,24 +60,24 @@ func main() {
 
 		err = github.CreateIssue(item)
 		if err != nil {
-			fmt.Errorf("%v", err.Error)
+			log.Fatalf("%v", err.Error())
 		}
-	} else if *r {
+	} else if *re {
 		fmt.Println("[Issue Read Mode]")
 		if *n <= 0 {
-			fmt.Println("Usage: $[program] -r -n [IssueNumber]")
+			fmt.Println("Need: -n [IssueNumber]")
 			return
 		}
 
 		issue, err := github.ReadIssue(*n)
 		if err != nil {
-			fmt.Errorf("%v", err.Error)
+			log.Fatalf("%v", err.Error())
 		}
 
 		fmt.Printf("No. %v\n", *n)
 		fmt.Printf("Title: %v\n", issue.Title)
 		fmt.Printf("Body: \n%v\n", issue.Body)
-	} else if *u {
+	} else if *e {
 		fmt.Println("[Issue Update Mode]")
 		if *n <= 0 {
 			fmt.Println("Usage: $[program] -u -n [IssueNumber]")
@@ -69,7 +86,7 @@ func main() {
 
 		issue, err := github.ReadIssue(*n)
 		if err != nil {
-			fmt.Errorf("%v", err.Error)
+			log.Fatalf("%v", err.Error())
 		}
 
 		fmt.Printf("Please Edit Issue Title, Press Enter to Open Editor.")
@@ -82,9 +99,9 @@ func main() {
 		outputText, err = editBody(issue.Body)
 		item.Body = outputText
 
-		err = github.UpdateIssue(*n, item)
+		err = github.EditIssue(*n, item)
 		if err != nil {
-			fmt.Errorf("%v", err.Error)
+			log.Fatalf("%v", err.Error())
 		}
 	} else if *cl {
 		fmt.Println("[Issue Close Mode]")
@@ -98,8 +115,11 @@ func main() {
 }
 
 func editBody(inputText string) (outputText string, err error) {
-
 	file, err := os.Create("description.txt")
+	if err != nil {
+		log.Fatalf("%v", err.Error())
+	}
+
 	_, err = file.Write([]byte(inputText))
 	if err != nil {
 		return "", err

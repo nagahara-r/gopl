@@ -15,19 +15,20 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
+// Issue はGithub Issueの要素を示します。
 type Issue struct {
-	Id    int    `json:"id"`
+	ID    int    `json:"id"`
 	Title string `json:"title"`
 	Body  string `json:"body"`
 	State string `json:"state"`
 }
 
-const (
-	githubuser = "naga718"
+var (
 	repository = "golang-testrepository"
+	githubuser = "naga718"
 )
 
-// Issueを作成します。
+// CreateIssue はIssueを作成します。
 // ユーザ認証のため、パスワードを要求します。
 func CreateIssue(item Issue) (err error) {
 	url := "https://api.github.com/repos/" + githubuser + "/" + repository + "/issues"
@@ -38,7 +39,7 @@ func CreateIssue(item Issue) (err error) {
 
 	httpClient := &http.Client{Timeout: time.Duration(10) * time.Second}
 
-	req, err := GetGithubJsonRequest("POST", url, jsonByte, true)
+	req, err := GetGithubJSONRequest("POST", url, jsonByte, true)
 	if err != nil {
 		return err
 	}
@@ -52,14 +53,13 @@ func CreateIssue(item Issue) (err error) {
 	return nil
 }
 
-// IDに対してIssueを取得します。
+// ReadIssue はIDに対してIssueを取得します。
 func ReadIssue(id int) (issue Issue, err error) {
-	err = nil
 	no := strconv.Itoa(id)
 	url := "https://api.github.com/repos/" + githubuser + "/" + repository + "/issues/" + no
 
 	httpClient := &http.Client{Timeout: time.Duration(10) * time.Second}
-	req, err := GetGithubJsonRequest("GET", url, nil, false)
+	req, err := GetGithubJSONRequest("GET", url, nil, false)
 	if err != nil {
 		return issue, err
 	}
@@ -73,16 +73,18 @@ func ReadIssue(id int) (issue Issue, err error) {
 	return issue, err
 }
 
-// Issueを更新します。
-func UpdateIssue(id int, issue Issue) (err error) {
-	err = nil
+// EditIssue はIssueを更新します。
+func EditIssue(id int, issue Issue) (err error) {
 	no := strconv.Itoa(id)
 	url := "https://api.github.com/repos/" + githubuser + "/" + repository + "/issues/" + no
 
 	jsonByte, err := json.Marshal(issue)
+	if err != nil {
+		return err
+	}
 
 	httpClient := &http.Client{Timeout: time.Duration(10) * time.Second}
-	req, err := GetGithubJsonRequest("PATCH", url, jsonByte, true)
+	req, err := GetGithubJSONRequest("PATCH", url, jsonByte, true)
 	if err != nil {
 		return err
 	}
@@ -93,16 +95,15 @@ func UpdateIssue(id int, issue Issue) (err error) {
 	return err
 }
 
-// Issueをクローズします。
+// CloseIssue はIssueをクローズします。
 func CloseIssue(id int) (err error) {
-	err = nil
 	no := strconv.Itoa(id)
 	url := "https://api.github.com/repos/" + githubuser + "/" + repository + "/issues/" + no
 
 	json := "{\"state\":\"close\"}"
 
 	httpClient := &http.Client{Timeout: time.Duration(10) * time.Second}
-	req, err := GetGithubJsonRequest("PATCH", url, []byte(json), true)
+	req, err := GetGithubJSONRequest("PATCH", url, []byte(json), true)
 	if err != nil {
 		return err
 	}
@@ -113,8 +114,8 @@ func CloseIssue(id int) (err error) {
 	return err
 }
 
-// Githubに対するリクエストを生成します。
-func GetGithubJsonRequest(method string, url string, body []byte, basicAuth bool) (req *http.Request, err error) {
+// GetGithubJSONRequest はGithubに対するリクエストを生成します。
+func GetGithubJSONRequest(method string, url string, body []byte, basicAuth bool) (req *http.Request, err error) {
 	req, err = http.NewRequest(method, url, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
@@ -123,24 +124,31 @@ func GetGithubJsonRequest(method string, url string, body []byte, basicAuth bool
 
 	if basicAuth {
 		fmt.Printf("Password: ")
-		password, err := password()
-		if err != nil {
-			return nil, err
-		}
+		var p string
+		p, err = getPassword()
 
-		req.SetBasicAuth("naga718", password)
+		req.SetBasicAuth("naga718", p)
 	}
 
 	return req, err
 }
 
 // BasicAuth用のパスワードを入力から取得します。
-func password() (password string, err error) {
+func getPassword() (password string, err error) {
 	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
 	fmt.Println("")
 	if err != nil {
 		return "", err
-	} else {
-		return string(bytePassword), nil
 	}
+	return string(bytePassword), nil
+}
+
+// SetGithubUser はGithubUserをセットします。
+func SetGithubUser(user string) {
+	githubuser = user
+}
+
+// SetRepository はリポジトリをセットします。
+func SetRepository(repo string) {
+	repository = repo
 }

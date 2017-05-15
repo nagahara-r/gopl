@@ -1,4 +1,5 @@
-// Newton fractal
+// newton
+// ニュートンフラクタルを表示させます。
 package main
 
 import (
@@ -39,7 +40,16 @@ func newton(z complex128) color.Color {
 	for i := uint8(0); i < iterations; i++ {
 		z -= (z - 1/(z*z*z)) / 4
 		if cmplx.Abs(z*z*z*z-1) < 1e-6 {
-			return color.Gray{255 - contrast*i}
+			// 4つの根に近似する値ごとに色付けとグラデーションする
+			if (real(z) - 1) > -0.5 {
+				return color.RGBA{255, 0, 0, 255 - contrast*i}
+			} else if (real(z) + 1) < 0.5 {
+				return color.RGBA{0, 255, 0, 255 - contrast*i}
+			} else if (imag(z) - 1) > -0.5 {
+				return color.RGBA{0, 0, 255, 255 - contrast*i}
+			} else {
+				return color.RGBA{255, 255, 0, 255 - contrast*i}
+			}
 		}
 	}
 	return color.Black

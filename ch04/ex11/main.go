@@ -128,6 +128,11 @@ func editBody(inputText string) (outputText string, err error) {
 		return "", err
 	}
 
+	file.Close()
+	if err != nil {
+		return "", err
+	}
+
 	cmd := exec.Command("vim", "description.txt")
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

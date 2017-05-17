@@ -56,6 +56,9 @@ func main() {
 		bufio.NewScanner(os.Stdin).Scan()
 
 		bodyText, err := editBody("-Please Write your Issue-")
+		if err != nil {
+			log.Fatalf("%v", err.Error())
+		}
 		item.Body = bodyText
 
 		err = github.CreateIssue(item)

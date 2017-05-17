@@ -1,3 +1,4 @@
+go get golang.org/x/crypto
 go build -o issue main.go
 echo 下記を実行可能です。
 echo Issue 作成

@@ -13,7 +13,7 @@ const (
 	// http://qiita.com/ruiu/items/28c77ed483cec365fe84
 )
 
-func reverse(s *[]int, l int) {
+func reverse(s *int, l int) {
 	for i, j := 0, l-1; i < j; i, j = i+1, j-1 {
 		*getPointer(s, i), *getPointer(s, j) = *getPointer(s, j), *getPointer(s, i)
 	}
@@ -21,7 +21,7 @@ func reverse(s *[]int, l int) {
 }
 
 // getPointer は*[]intで指定された配列の要素をintポインタにして返します。
-func getPointer(addr *[]int, index int) (result *int) {
+func getPointer(addr *int, index int) (result *int) {
 	// unsafe.Pointer にして、アドレスを足し算可能なように uintptr にキャスト
 	uip := uintptr(unsafe.Pointer(addr))
 

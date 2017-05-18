@@ -1,11 +1,11 @@
-package main
+package reverse
 
 import "testing"
 
 func TestReverseUTF8(t *testing.T) {
 	want := "おえういあ"
 	get := []byte("あいうえお")
-	reverse(get)
+	Reverse(get)
 
 	if string(get) != want {
 		t.Errorf("want = %v, get = %v", want, string(get))
@@ -15,7 +15,7 @@ func TestReverseUTF8(t *testing.T) {
 func TestReverseAscii(t *testing.T) {
 	want := "edcba"
 	get := []byte("abcde")
-	reverse(get)
+	Reverse(get)
 
 	if string(get) != want {
 		t.Errorf("want = %v, get = %v", want, string(get))
@@ -25,7 +25,7 @@ func TestReverseAscii(t *testing.T) {
 func TestReverseAsciiAndUTF8(t *testing.T) {
 	want := "おdえcうbいaあ"
 	get := []byte("あaいbうcえdお")
-	reverse(get)
+	Reverse(get)
 
 	if string(get) != want {
 		t.Errorf("want = %v, get = %v", want, string(get))

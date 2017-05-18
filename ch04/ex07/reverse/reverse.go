@@ -1,11 +1,8 @@
-package main
+package reverse
 
-import (
-	"fmt"
-	"unicode/utf8"
-)
+import "unicode/utf8"
 
-func reverse(s []byte) {
+func Reverse(s []byte) {
 	if utf8.RuneCount(s) < 1 {
 		return
 	}
@@ -13,7 +10,7 @@ func reverse(s []byte) {
 
 	byteRightShift(s, size)
 	copy(s[:size], string(r))
-	reverse(s[size:])
+	Reverse(s[size:])
 }
 
 func byteRightShift(s []byte, size int) {
@@ -24,11 +21,4 @@ func byteRightShift(s []byte, size int) {
 	for i := 0; length-size-i >= 0; i++ {
 		s[length-i] = s[length-i-size]
 	}
-}
-
-func main() {
-	s := []byte("あaいbうcえdお")
-
-	reverse(s)
-	fmt.Println(string(s))
 }

@@ -7,36 +7,38 @@ import (
 
 // RatComplex はRatで複素数を実現します。
 type RatComplex struct {
-	real big.Rat
-	imag big.Rat
+	Real big.Rat
+	Imag big.Rat
 }
 
 // NewRatComplex はRat複素数を作成します。
 func NewRatComplex(real float64, imag float64) (result RatComplex) {
-	result.real.SetFloat64(real)
-	result.imag.SetFloat64(imag)
+	result.Real.SetFloat64(real)
+	result.Imag.SetFloat64(imag)
 
 	return result
 }
 
 // Add はRat複素数を足し算します。
 func Add(a RatComplex, b RatComplex) (result RatComplex) {
-	result.real.Add(&a.real, &b.real)
-	result.imag.Add(&a.imag, &b.imag)
+	result.Real.Add(&a.Real, &b.Real)
+	result.Imag.Add(&a.Imag, &b.Imag)
 	return result
 }
 
 // Mul はRat複素数を掛け算します。
 func Mul(a RatComplex, b RatComplex) (result RatComplex) {
 	// 実数部
-	result.real.Mul(&a.real, &b.real)
-	result.imag.Mul(&a.imag, &b.imag)
-	result.real.Sub(&result.real, &result.imag)
+	result.Real.Mul(&a.Real, &b.Real)
+	result.Imag.Mul(&a.Imag, &b.Imag)
+	result.Real.Sub(&result.Real, &result.Imag)
 
 	// 虚数部
-	imag1 := result.imag.Mul(&a.imag, &b.real)
-	imag2 := result.imag.Mul(&a.real, &b.imag)
-	result.imag.Add(imag1, imag2)
+	imag := RatComplex{}
+	imag.Real.Mul(&a.Imag, &b.Real)
+	imag.Imag.Mul(&a.Real, &b.Imag)
+	imag.Imag.Add(&imag.Real, &imag.Imag)
+	result.Imag = imag.Imag
 
 	return result
 }
@@ -45,7 +47,7 @@ func Mul(a RatComplex, b RatComplex) (result RatComplex) {
 
 // Abs はRat複素数の絶対値を取得します。
 func Abs(z RatComplex) (result float64) {
-	a, _ := z.real.Float64()
-	b, _ := z.imag.Float64()
+	a, _ := z.Real.Float64()
+	b, _ := z.Imag.Float64()
 	return math.Hypot(a, b)
 }

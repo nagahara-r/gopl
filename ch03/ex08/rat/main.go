@@ -6,7 +6,9 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"log"
 	"os"
+	"time"
 
 	"github.com/naga718/golang-practice/ch03/ex08/rat/ratcomplex"
 )
@@ -24,6 +26,8 @@ func ratFractal() {
 		scale                  = 10000000
 	)
 
+	start := time.Now()
+
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
 	for py := 0; py < height; py++ {
 		y := (float64(py)+yfix*scale)/height*(ymax-ymin) + ymin
@@ -35,6 +39,10 @@ func ratFractal() {
 			img.Set(px, py, mandelbrot(z))
 		}
 	}
+
+	end := time.Now()
+	log.Printf("big.Rat(ite = 3) = %f Seconds\n", (end.Sub(start)).Seconds())
+
 	png.Encode(os.Stdout, img) // NOTE: ignoring errors
 }
 

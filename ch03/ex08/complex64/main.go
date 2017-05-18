@@ -5,8 +5,10 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"log"
 	"math/cmplx"
 	"os"
+	"time"
 )
 
 func main() {
@@ -18,6 +20,8 @@ func main() {
 		scale                  = 10000000
 	)
 
+	start := time.Now()
+
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
 	for py := 0; py < height; py++ {
 		y := (float64(py)+yfix*scale)/height*(ymax-ymin) + ymin
@@ -28,6 +32,10 @@ func main() {
 			img.Set(px, py, mandelbrot(z))
 		}
 	}
+
+	end := time.Now()
+	log.Printf("complex64 = %f Seconds\n", (end.Sub(start)).Seconds())
+
 	png.Encode(os.Stdout, img) // NOTE: ignoring errors
 }
 

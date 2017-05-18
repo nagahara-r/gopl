@@ -5,7 +5,9 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"log"
 	"os"
+	"time"
 
 	"github.com/naga718/golang-practice/ch03/ex08/bigfloat/bigcomplex"
 )
@@ -23,6 +25,8 @@ func bigMandelbrot() {
 		scale                  = 10000000
 	)
 
+	start := time.Now()
+
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
 	for py := 0; py < height; py++ {
 		y := (float64(py)+yfix*scale)/height*(ymax-ymin) + ymin
@@ -30,10 +34,15 @@ func bigMandelbrot() {
 			x := (float64(px)+xfix*scale)/width*(xmax-xmin) + xmin
 			scalebigfloat := bigcomplex.NewBigFloatComplex(float64(1)/float64(scale), float64(0))
 			z := scalebigfloat.Mul(bigcomplex.NewBigFloatComplex(x, y), scalebigfloat)
+
 			// Image point (px, py) represents complex value z.
 			img.Set(px, py, mandelbrot(z))
 		}
 	}
+
+	end := time.Now()
+	log.Printf("big.Float = %f Seconds\n", (end.Sub(start)).Seconds())
+
 	png.Encode(os.Stdout, img) // NOTE: ignoring errors
 }
 

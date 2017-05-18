@@ -4,7 +4,6 @@ package main
 import (
 	"image"
 	"image/color"
-	"image/color/palette"
 	"image/png"
 	"math/cmplx"
 	"os"
@@ -37,7 +36,10 @@ func mandelbrot(z complex128) color.Color {
 	for n := uint8(0); n < iterations; n++ {
 		v = v*v + z
 		if cmplx.Abs(v) > 2 {
-			return palette.Plan9[n]
+			// ループ回数が多い＝赤
+			// ループ回数が少ない＝青
+			// 中間＝緑
+			return color.RGBA{contrast * n, contrast * 2 * n, 255 - contrast*n, 255}
 		}
 	}
 	return color.Black

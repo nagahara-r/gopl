@@ -3,7 +3,7 @@
 
 package rotate
 
-func rotate(a []int, r int) {
+func Rotate(a []int, r int) {
 	r = r % len(a)
 
 	buf := make([]int, len(a[:r]))

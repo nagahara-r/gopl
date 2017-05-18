@@ -13,7 +13,7 @@ const (
 	// http://qiita.com/ruiu/items/28c77ed483cec365fe84
 )
 
-func reverse(s *int, l int) {
+func Reverse(s *int, l int) {
 	for i, j := 0, l-1; i < j; i, j = i+1, j-1 {
 		*getPointer(s, i), *getPointer(s, j) = *getPointer(s, j), *getPointer(s, i)
 	}

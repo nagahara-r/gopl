@@ -1,7 +1,7 @@
 // Copyright © 2017 Yuki Nagahara
 
 // 課題4-11：Github Issue を作成、読み出し、アップデート、クローズするコマンドラインツールです。
-// 必要な場合はVimを開きます。
+// 必要な場合はユーザが選択したエディタを開きます。
 package main
 
 import (
@@ -32,6 +32,8 @@ func main() {
 		return
 	}
 
+	editor := setEditor()
+
 	github.SetGithubUser(*u)
 	github.SetRepository(*r)
 
@@ -55,7 +57,7 @@ func main() {
 		fmt.Printf("Please Input Issue Description, Press Enter to Open Editor.")
 		bufio.NewScanner(os.Stdin).Scan()
 
-		bodyText, err := editBody("-Please Write your Issue-")
+		bodyText, err := editBody("-Please Write your Issue-", editor)
 		if err != nil {
 			log.Fatalf("%v", err.Error())
 		}
@@ -94,12 +96,12 @@ func main() {
 
 		fmt.Printf("Please Edit Issue Title, Press Enter to Open Editor.")
 		bufio.NewScanner(os.Stdin).Scan()
-		outputText, err := editBody(issue.Title)
+		outputText, err := editBody(issue.Title, editor)
 		item.Title = outputText
 
 		fmt.Printf("Please Edit Issue Description, Press Enter to Open Editor.")
 		bufio.NewScanner(os.Stdin).Scan()
-		outputText, err = editBody(issue.Body)
+		outputText, err = editBody(issue.Body, editor)
 		item.Body = outputText
 
 		err = github.EditIssue(*n, item)
@@ -117,7 +119,17 @@ func main() {
 	}
 }
 
-func editBody(inputText string) (outputText string, err error) {
+func setEditor() string {
+	fmt.Print("Please Type Your Favorite Editor: ")
+	scanner := bufio.NewScanner(os.Stdin)
+	if !scanner.Scan() {
+		log.Fatalf("EditorName Error")
+	}
+
+	return scanner.Text()
+}
+
+func editBody(inputText string, editor string) (outputText string, err error) {
 	file, err := os.Create("description.txt")
 	if err != nil {
 		log.Fatalf("%v", err.Error())
@@ -133,7 +145,7 @@ func editBody(inputText string) (outputText string, err error) {
 		return "", err
 	}
 
-	cmd := exec.Command("vim", "description.txt")
+	cmd := exec.Command(editor, "description.txt")
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	err = cmd.Run()

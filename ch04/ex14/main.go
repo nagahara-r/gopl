@@ -28,21 +28,21 @@ import (
 
 var issueList = template.Must(template.New("issuelist").Parse(`
 <h1>{{.TotalCount}} issues</h1>
-<table>
+<table border=1>
 <tr style='text-align: left'>
   <th>#</th>
   <th>State</th>
   <th>Milestone</th>
   <th>User</th>
-  <th>Title</th>
+  <th>Title / Description</th>
 </tr>
 {{range .Items}}
-<tr>
+<tr valign="top">
   <td><a href='{{.HTMLURL}}'>{{.Number}}</a></td>
   <td>{{.State}}</td>
   <td><a href='{{.Milestone.HTMLURL}}'>{{.Milestone.Title}}</a></td>
   <td><a href='{{.User.HTMLURL}}'>{{.User.Login}}</a></td>
-  <td><a href='{{.HTMLURL}}'>{{.Title}}</a></td>
+  <td><b><a href='{{.HTMLURL}}'>{{.Title}}</a></b></br>{{.Body}}</td>
 </tr>
 {{end}}
 </table>
@@ -79,6 +79,8 @@ func webserverProc(query string) ([]byte, error) {
 		if result.Items[i].Milestone == nil {
 			result.Items[i].Milestone = &Milestone{}
 		}
+
+		result.Items[i].Body = strings.Replace(result.Items[i].Body, "\n", "</br>", -1)
 	}
 	var buffer bytes.Buffer
 	if err := issueList.Execute(&buffer, result); err != nil {
@@ -123,8 +125,8 @@ type Issue struct {
 	Title     string
 	State     string
 	User      *User
-	CreatedAt time.Time `json:"created_at"`
-	Body      string    // in Markdown format
+	CreatedAt time.Time     `json:"created_at"`
+	Body      template.HTML // in Markdown format
 	Milestone *Milestone
 }
 

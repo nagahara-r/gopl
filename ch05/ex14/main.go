@@ -47,10 +47,6 @@ func getWithBreadthFirst(m map[string][]string) (order []string) {
 
 	visitAll = func(item string) []string {
 		order = append(order, item)
-
-		if m[item] == nil {
-			return nil
-		}
 		return m[item]
 	}
 

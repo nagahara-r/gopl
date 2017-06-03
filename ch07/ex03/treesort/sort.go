@@ -58,7 +58,7 @@ func add(t *tree, value int) *tree {
 }
 
 func (t *tree) String() (str string) {
-	return strings.Join([]string{"[", str, buildStr(t), "]"}, "")
+	return strings.Join([]string{"[", buildStr(t), "]"}, "")
 }
 
 func buildStr(t *tree) (str string) {

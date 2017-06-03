@@ -155,15 +155,13 @@ func (s *IntSet) AddAll(x ...int) {
 
 // Elems は rangeループで取得するに優れた []int を返します。
 func (s *IntSet) Elems() (elems []int) {
-	// var buf bytes.Buffer
 	for i, word := range s.words {
 		if word == 0 {
 			continue
 		}
-		for j := 0; j < 64; j++ {
+		for j := 0; j < uintSize; j++ {
 			if word&(1<<uint(j)) != 0 {
-				elems = append(elems, 64*i+j)
-				// fmt.Fprintf(&buf, "%d", 64*i+j)
+				elems = append(elems, uintSize*i+j)
 			}
 		}
 	}

@@ -36,6 +36,11 @@ func TestExpand(t *testing.T) {
 			"expands 日本語です 日本語二つ目です <- string!",
 		},
 		{
+			"$",
+			func(a string) string { return a + "aaa" },
+			"aaa",
+		},
+		{
 			"expands $foo <- string!",
 			nil,
 			"expands $foo <- string!",

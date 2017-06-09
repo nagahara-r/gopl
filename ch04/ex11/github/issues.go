@@ -127,7 +127,7 @@ func GetGithubJSONRequest(method string, url string, body []byte, basicAuth bool
 		var p string
 		p, err = getPassword()
 
-		req.SetBasicAuth("naga718", p)
+		req.SetBasicAuth(githubuser, p)
 	}
 
 	return req, err

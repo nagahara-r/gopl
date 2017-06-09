@@ -32,8 +32,6 @@ func main() {
 		return
 	}
 
-	editor := setEditor()
-
 	github.SetGithubUser(*u)
 	github.SetRepository(*r)
 
@@ -45,6 +43,7 @@ func main() {
 	item := github.Issue{}
 
 	if *c {
+		editor := setEditor()
 		fmt.Println("[Issue Create Mode]")
 		fmt.Printf("Title: ")
 		scanner := bufio.NewScanner(os.Stdin)
@@ -83,6 +82,7 @@ func main() {
 		fmt.Printf("Title: %v\n", issue.Title)
 		fmt.Printf("Body: \n%v\n", issue.Body)
 	} else if *e {
+		editor := setEditor()
 		fmt.Println("[Issue Update Mode]")
 		if *n <= 0 {
 			fmt.Println("Usage: $[program] -u -n [IssueNumber]")

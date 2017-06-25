@@ -15,13 +15,18 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"math/cmplx"
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/naga718/golang-practice/ch03/ex08/bigfloat/bigcomplex"
 )
 
 func main() {
+	bigMandelbrot()
+}
+
+func bigMandelbrot() {
 	p := flag.Int("p", 1, "Number of Processor(s)")
 	flag.Parse()
 	//fmt.Printf("CPU=%d\n", *p)
@@ -31,21 +36,24 @@ func main() {
 	const (
 		xmin, ymin, xmax, ymax = -2, -2, +2, +2
 		width, height          = 1024, 1024
+		xfix                   = 0
+		yfix                   = 256
+		scale                  = 10000000
 	)
 
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
-
-	// 並列で動作させるための準備
 	wg := new(sync.WaitGroup)
+
 	for py := 0; py < height; py++ {
-		y := float64(py)/height*(ymax-ymin) + ymin
+		y := (float64(py)+yfix*scale)/height*(ymax-ymin) + ymin
 		for px := 0; px < width; px++ {
-			x := float64(px)/width*(xmax-xmin) + xmin
-			z := complex(x, y)
+			x := (float64(px)+xfix*scale)/width*(xmax-xmin) + xmin
+			scalebigfloat := bigcomplex.NewBigFloatComplex(float64(1)/float64(scale), float64(0))
+			z := scalebigfloat.Mul(bigcomplex.NewBigFloatComplex(x, y), scalebigfloat)
 
 			// マンデルブロ計算時に並列化
 			wg.Add(1)
-			go func(z complex128) {
+			go func(z bigcomplex.BigFloatComplex) {
 				// Image point (px, py) represents complex value z.
 				img.Set(px, py, mandelbrot(z))
 				wg.Done()
@@ -61,50 +69,20 @@ func main() {
 	//png.Encode(os.Stdout, img) // NOTE: ignoring errors
 }
 
-func mandelbrot(z complex128) color.Color {
+func mandelbrot(z bigcomplex.BigFloatComplex) color.Color {
 	const iterations = 200
 	const contrast = 15
 
-	var v complex128
+	var v bigcomplex.BigFloatComplex
 	for n := uint8(0); n < iterations; n++ {
-		v = v*v + z
-		if cmplx.Abs(v) > 2 {
-			return color.Gray{255 - contrast*n}
-		}
-	}
-	return color.Black
-}
-
-//!-
-
-// Some other interesting functions:
-
-func acos(z complex128) color.Color {
-	v := cmplx.Acos(z)
-	blue := uint8(real(v)*128) + 127
-	red := uint8(imag(v)*128) + 127
-	return color.YCbCr{192, blue, red}
-}
-
-func sqrt(z complex128) color.Color {
-	v := cmplx.Sqrt(z)
-	blue := uint8(real(v)*128) + 127
-	red := uint8(imag(v)*128) + 127
-	return color.YCbCr{128, blue, red}
-}
-
-// f(x) = x^4 - 1
-//
-// z' = z - f(z)/f'(z)
-//    = z - (z^4 - 1) / (4 * z^3)
-//    = z - (z - 1/z^3) / 4
-func newton(z complex128) color.Color {
-	const iterations = 37
-	const contrast = 7
-	for i := uint8(0); i < iterations; i++ {
-		z -= (z - 1/(z*z*z)) / 4
-		if cmplx.Abs(z*z*z*z-1) < 1e-6 {
-			return color.Gray{255 - contrast*i}
+		//log.Println("n = ", n)
+		v = v.Mul(v, v)
+		v = v.Add(v, z)
+		if v.Abs(v) > 2 {
+			// ループ回数が多い＝赤
+			// ループ回数が少ない＝青
+			// 中間＝緑
+			return color.RGBA{contrast * n, contrast * 2 * n, 255 - contrast*n, 255}
 		}
 	}
 	return color.Black

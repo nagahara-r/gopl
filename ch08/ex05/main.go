@@ -64,7 +64,7 @@ func bigMandelbrot() {
 	}
 
 	proctime := time.Now().Sub(stime)
-	fmt.Printf("proccesor = %v, time = %v\n", *p, proctime)
+	fmt.Printf("processor = %v, time = %v\n", *p, proctime)
 
 	//png.Encode(os.Stdout, img) // NOTE: ignoring errors
 }

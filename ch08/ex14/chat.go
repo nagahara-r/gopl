@@ -2,7 +2,7 @@
 // License: https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 // Copyright © 2017 Yuki Nagahara
-// 練習8-13: 5分間何も送ってこないクライアントを切断するように修正
+// 練習8-14: 個々のクライアントが到着した際、名前を提供するように変更します。
 
 // See page 254.
 //!+
@@ -62,25 +62,31 @@ func handleConn(conn net.Conn) {
 	ch := make(chan string) // outgoing client messages
 	go clientWriter(conn, ch)
 
-	who := conn.RemoteAddr().String()
+	//who := conn.RemoteAddr().String()
+	input := bufio.NewScanner(conn)
+	who := enterName(input, ch)
+
 	clients = append(clients, who)
 
 	ch <- "You are " + who
 	ch <- "Clients : \n" + strClients(clients) + "\n"
+
 	messages <- who + " has arrived"
 	entering <- ch
 
 	scanning := make(chan string)
+
+	timeout := time.After(time.Second * timeoutsec)
 	fin := make(chan struct{})
 	go func(conn net.Conn) {
-		input := bufio.NewScanner(conn)
 		for input.Scan() {
 			scanning <- input.Text()
 		}
-		// NOTE: ignoring potential errors from input.Err()
+
 		close(fin)
+
+		// NOTE: ignoring potential errors from input.Err()
 	}(conn)
-	timeout := time.After(time.Second * timeoutsec)
 
 	// Scanもゴルーチン化して、timeoutしない限りは新たなタイムアウト時間をセットし続ける
 	for isFinish := false; isFinish == false; {
@@ -138,6 +144,28 @@ func remove(srcs []string, dst string) (result []string) {
 		}
 	}
 	return result
+}
+
+func contains(srcs []string, target string) bool {
+	for _, src := range srcs {
+		if src == target {
+			return true
+		}
+	}
+	return false
+}
+
+func enterName(input *bufio.Scanner, ch chan string) (name string) {
+	ch <- "Input Your Name"
+	for input.Scan() {
+		if contains(clients, input.Text()) {
+			ch <- "Sorry! This Name is Used"
+			continue
+		}
+		break
+	}
+
+	return input.Text()
 }
 
 //!-main

@@ -2,7 +2,7 @@
 // License: https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 // Copyright © 2017 Yuki Nagahara
-// 練習8-12: Server が現在のClient集合を通知するように修正
+// 練習8-13: 5分間何も送ってこないクライアントを切断するように修正
 
 // See page 254.
 //!+
@@ -16,6 +16,7 @@ import (
 	"log"
 	"net"
 	"strings"
+	"time"
 )
 
 //!+broadcaster
@@ -27,6 +28,10 @@ var (
 	messages = make(chan string) // all incoming client messages
 
 	clients = []string{}
+)
+
+const (
+	timeoutsec = 300
 )
 
 func broadcaster() {
@@ -65,11 +70,26 @@ func handleConn(conn net.Conn) {
 	messages <- who + " has arrived"
 	entering <- ch
 
-	input := bufio.NewScanner(conn)
-	for input.Scan() {
-		messages <- who + ": " + input.Text()
+	scanning := make(chan string)
+	go func(conn net.Conn) {
+		input := bufio.NewScanner(conn)
+		for input.Scan() {
+			scanning <- input.Text()
+		}
+		// NOTE: ignoring potential errors from input.Err()
+	}(conn)
+	timeout := time.After(time.Second * timeoutsec)
+
+	// Scanもゴルーチン化して、timeoutしない限りは新たなタイムアウト時間をセットし続ける
+	for isTimeout := false; isTimeout == false; {
+		select {
+		case str := <-scanning:
+			timeout = time.After(time.Second * timeoutsec)
+			messages <- who + ": " + str
+		case <-timeout:
+			isTimeout = true
+		}
 	}
-	// NOTE: ignoring potential errors from input.Err()
 
 	leaving <- ch
 	messages <- who + " has left"

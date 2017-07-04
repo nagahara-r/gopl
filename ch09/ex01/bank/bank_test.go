@@ -5,7 +5,7 @@ package bank_test
 import (
 	"testing"
 
-	"github.com/naga718/golang-practice/ch09/ex01"
+	"github.com/naga718/golang-practice/ch09/ex01/bank"
 )
 
 func TestWithDraw(t *testing.T) {

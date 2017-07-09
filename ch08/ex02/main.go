@@ -16,7 +16,7 @@ func main() {
 	port := flag.Int("port", 8000, "port number")
 	flag.Parse()
 
-	listener, err := net.Listen("tcp", "localhost:"+strconv.Itoa(*port))
+	listener, err := net.Listen("tcp4", ":"+strconv.Itoa(*port))
 	if err != nil {
 		log.Fatal(err)
 	}

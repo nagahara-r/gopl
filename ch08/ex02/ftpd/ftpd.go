@@ -3,9 +3,7 @@
 
 // 現状の制約リスト：
 // ログイン機能はありません（何を入力しても匿名ユーザとしてログイン）
-// ディレクトリ指定できません
 // パーミッション設定できません
-// ディレクトリ作成できません
 
 package ftpd
 
@@ -30,6 +28,7 @@ type client struct {
 	isPut        bool
 	currentDir   string
 	rootDir      string
+	filename     string
 	dataserverch chan struct{}
 }
 
@@ -50,6 +49,8 @@ var (
 		// 257 は カレントディレクトリを表すのでPWDで作る
 		//257: "257 \"/\" is current directory.\r\n",
 
+		350: "350 File exists. Ready to Move.\r\n",
+
 		// Errors
 		500: "500 Command not understood.\r\n",
 		501: "501 Parameters or Auguments Parse Error.\r\n",
@@ -61,6 +62,7 @@ var (
 		"USER": user,
 		"SYST": syst,
 		"FEAT": nonimpl,
+		"TYPE": typef,
 		"CWD":  cwd,
 		"PWD":  pwd,
 		"EPSV": nonimpl,
@@ -71,6 +73,11 @@ var (
 		"SIZE": size,
 		"RETR": retr,
 		"STOR": stor,
+		"RNFR": rnfr,
+		"RNTO": rnto,
+		"DELE": dele,
+		"RMD":  dele,
+		"MKD":  mkd,
 		"MDTM": mdtm,
 		"QUIT": quit,
 	}
@@ -99,8 +106,8 @@ func HandleConn(conn net.Conn) {
 
 		messagesp := strings.Split(message, "\r\n")
 		log.Printf("[read()] %v", messagesp[0])
-		cm := regexp.MustCompile("([A-Z]+)").FindString(messagesp[0])
-		f, ok := commands[cm]
+		cm := regexp.MustCompile("([A-Za-z]+)").FindString(messagesp[0])
+		f, ok := commands[strings.ToUpper(cm)]
 		if !ok {
 			// Non Implemented Command
 			nonimpl(cli, conn)
@@ -143,12 +150,24 @@ func syst(message *client, conn net.Conn) {
 	sendString(statuses[215], conn)
 }
 
+func typef(cli *client, conn net.Conn) {
+	// Caution: 本当はASCIIモードと判別しないといけない
+	// 全部バイナリモードとして動く
+	sendString(statuses[200], conn)
+}
+
 func nonimpl(cli *client, conn net.Conn) {
 	sendString(statuses[502], conn)
 }
 
 func cwd(cli *client, conn net.Conn) {
 	messages := strings.Split(cli.message, " ")
+
+	// スラッシュが最初に来た場合、まずはルートに戻る処理が必要
+	if strings.Index(messages[1], "/") == 0 {
+		cli.currentDir = cli.rootDir
+		messages[1] = messages[1][1:]
+	}
 
 	// ファイルの一覧を読めるか？
 	_, err := ioutil.ReadDir(cli.currentDir + "/" + messages[1])
@@ -163,7 +182,7 @@ func cwd(cli *client, conn net.Conn) {
 }
 
 func pwd(cli *client, conn net.Conn) {
-	dir := strings.TrimPrefix(cli.currentDir, cli.rootDir) + "/"
+	dir := strings.TrimPrefix(cli.currentDir, cli.rootDir)
 	message := "257 \"" + dir + "\" is current directory.\r\n"
 	sendString(message, conn)
 }
@@ -205,7 +224,7 @@ func list(cli *client, conn net.Conn) {
 
 	message := ""
 	for _, fileinfo := range fileinfos {
-		message += fmt.Sprintf("%v\t%v\t%v\t%v\r\n", fileinfo.Mode().String(), fileinfo.Size(), fileinfo.ModTime(), fileinfo.Name())
+		message += fmt.Sprintf("%v 0 owner %v %v %v\r\n", fileinfo.Mode().String(), fileinfo.Size(), fileinfo.ModTime().Format("Jan 2 15:04"), fileinfo.Name())
 	}
 	cli.reader = strings.NewReader(message)
 
@@ -300,6 +319,59 @@ func stor(cli *client, conn net.Conn) {
 	sendString(statuses[226], conn)
 }
 
+func rnfr(cli *client, conn net.Conn) {
+	messages := strings.Split(cli.message, " ")
+
+	// ファイルが存在するか？
+	_, err := os.Stat(cli.currentDir + "/" + messages[1])
+	if err != nil {
+		log.Printf("%v", err)
+		sendString(statuses[550], conn)
+		return
+	}
+	cli.filename = cli.currentDir + "/" + messages[1]
+	sendString(statuses[350], conn)
+}
+
+func rnto(cli *client, conn net.Conn) {
+	messages := strings.Split(cli.message, " ")
+
+	// ファイルリネーム
+	err := os.Rename(cli.filename, cli.currentDir+"/"+messages[1])
+	if err != nil {
+		log.Printf("%v", err)
+		sendString(statuses[550], conn)
+		return
+	}
+	sendString(statuses[250], conn)
+}
+
+func dele(cli *client, conn net.Conn) {
+	messages := strings.Split(cli.message, " ")
+
+	// ファイル削除
+	err := os.Remove(cli.currentDir + "/" + messages[1])
+	if err != nil {
+		log.Printf("%v", err)
+		sendString(statuses[550], conn)
+		return
+	}
+	sendString(statuses[250], conn)
+}
+
+func mkd(cli *client, conn net.Conn) {
+	messages := strings.Split(cli.message, " ")
+
+	// ファイル追加
+	err := os.Mkdir(cli.currentDir+"/"+messages[1], 0755)
+	if err != nil {
+		log.Printf("%v", err)
+		sendString(statuses[550], conn)
+		return
+	}
+	sendString(statuses[250], conn)
+}
+
 func mdtm(cli *client, conn net.Conn) {
 	messages := strings.Split(cli.message, " ")
 
@@ -327,7 +399,7 @@ func dataTransferServer(port int, cli *client) {
 	dataservermutex.Lock()
 	defer dataservermutex.Unlock()
 	log.Printf("[DataTransferServer(%v)]", port)
-	listener, err := net.Listen("tcp", "localhost:"+strconv.Itoa(port))
+	listener, err := net.Listen("tcp4", ":"+strconv.Itoa(port))
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -3,7 +3,6 @@
 
 // 現状の制約リスト：
 // ログイン機能はありません（何を入力しても匿名ユーザとしてログイン）
-// パーミッション設定できません
 
 package ftpd
 
@@ -79,6 +78,7 @@ var (
 		"RMD":  dele,
 		"MKD":  mkd,
 		"MDTM": mdtm,
+		"SITE": chmod,
 		"QUIT": quit,
 	}
 
@@ -183,6 +183,9 @@ func cwd(cli *client, conn net.Conn) {
 
 func pwd(cli *client, conn net.Conn) {
 	dir := strings.TrimPrefix(cli.currentDir, cli.rootDir)
+	if dir == "" {
+		dir = "/"
+	}
 	message := "257 \"" + dir + "\" is current directory.\r\n"
 	sendString(message, conn)
 }
@@ -388,6 +391,26 @@ func mdtm(cli *client, conn net.Conn) {
 
 	message := fmt.Sprintf("213 %v\r\n", format)
 	sendString(message, conn)
+}
+
+func chmod(cli *client, conn net.Conn) {
+	messages := strings.Split(cli.message, " ")
+
+	mod, err := strconv.ParseInt(messages[2], 8, 32)
+	if err != nil {
+		log.Printf("%v", err)
+		sendString(statuses[550], conn)
+		return
+	}
+
+	// ファイルの一覧を作成
+	err = os.Chmod(cli.currentDir+"/"+messages[3], os.FileMode(mod))
+	if err != nil {
+		log.Printf("%v", err)
+		sendString(statuses[550], conn)
+		return
+	}
+	sendString(statuses[250], conn)
 }
 
 func quit(cli *client, conn net.Conn) {

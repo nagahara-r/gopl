@@ -13,6 +13,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -21,6 +22,8 @@ import (
 )
 
 type client struct {
+	user         string
+	password     string
 	message      string
 	writer       io.Writer
 	reader       io.Reader
@@ -63,6 +66,7 @@ var (
 		"FEAT": nonimpl,
 		"TYPE": typef,
 		"CWD":  cwd,
+		"CDUP": cdup,
 		"PWD":  pwd,
 		"EPSV": nonimpl,
 		"PASV": pasv,
@@ -164,22 +168,35 @@ func nonimpl(cli *client, conn net.Conn) {
 func cwd(cli *client, conn net.Conn) {
 	messages := strings.Split(cli.message, " ")
 
-	// スラッシュが最初に来た場合、まずはルートに戻る処理が必要
-	if strings.Index(messages[1], "/") == 0 {
-		cli.currentDir = cli.rootDir
-		messages[1] = messages[1][1:]
-	}
-
 	// ファイルの一覧を読めるか？
-	_, err := ioutil.ReadDir(cli.currentDir + "/" + messages[1])
+	_, err := os.Stat(getPath(messages[1], cli))
 	if err != nil {
 		log.Printf("%v", err)
 		sendString(statuses[550], conn)
 		return
 	}
+
 	// 読めたら移動して正常系
-	cli.currentDir = cli.currentDir + "/" + messages[1]
+	dir, err := filepath.Abs(getPath(messages[1], cli))
+	if err != nil {
+		log.Printf("%v", err)
+		sendString(statuses[550], conn)
+		return
+	}
+
+	// Rootより前の階層にいる＝フルパスがRootより短くなるので読めてもエラーにする
+	if len(dir) < len(cli.rootDir) {
+		sendString(statuses[550], conn)
+		return
+	}
+
+	cli.currentDir = dir
 	sendString(statuses[250], conn)
+}
+
+func cdup(cli *client, conn net.Conn) {
+	cli.message = "CWD .."
+	cwd(cli, conn)
 }
 
 func pwd(cli *client, conn net.Conn) {
@@ -285,7 +302,7 @@ func size(cli *client, conn net.Conn) {
 	messages := strings.Split(cli.message, " ")
 
 	// ファイルの一覧を作成
-	fstat, err := os.Stat(cli.currentDir + "/" + messages[1])
+	fstat, err := os.Stat(getPath(messages[1], cli))
 	if err != nil {
 		log.Printf("%v", err)
 		sendString(statuses[550], conn)
@@ -300,7 +317,7 @@ func retr(cli *client, conn net.Conn) {
 	messages := strings.Split(cli.message, " ")
 
 	// ファイルの一覧を作成
-	file, err := os.Open(cli.currentDir + "/" + messages[1])
+	file, err := os.Open(getPath(messages[1], cli))
 	if err != nil {
 		log.Printf("%v", err)
 		sendString(statuses[550], conn)
@@ -321,7 +338,7 @@ func stor(cli *client, conn net.Conn) {
 	messages := strings.Split(cli.message, " ")
 
 	// ファイルの一覧を作成
-	file, err := os.Create(cli.currentDir + "/" + messages[1])
+	file, err := os.Create(getPath(messages[1], cli))
 	if err != nil {
 		log.Printf("%v", err)
 		sendString(statuses[550], conn)
@@ -343,13 +360,13 @@ func rnfr(cli *client, conn net.Conn) {
 	messages := strings.Split(cli.message, " ")
 
 	// ファイルが存在するか？
-	_, err := os.Stat(cli.currentDir + "/" + messages[1])
+	_, err := os.Stat(getPath(messages[1], cli))
 	if err != nil {
 		log.Printf("%v", err)
 		sendString(statuses[550], conn)
 		return
 	}
-	cli.filename = cli.currentDir + "/" + messages[1]
+	cli.filename = getPath(messages[1], cli)
 	sendString(statuses[350], conn)
 }
 
@@ -357,7 +374,7 @@ func rnto(cli *client, conn net.Conn) {
 	messages := strings.Split(cli.message, " ")
 
 	// ファイルリネーム
-	err := os.Rename(cli.filename, cli.currentDir+"/"+messages[1])
+	err := os.Rename(cli.filename, getPath(messages[1], cli))
 	if err != nil {
 		log.Printf("%v", err)
 		sendString(statuses[550], conn)
@@ -370,7 +387,7 @@ func dele(cli *client, conn net.Conn) {
 	messages := strings.Split(cli.message, " ")
 
 	// ファイル削除
-	err := os.Remove(cli.currentDir + "/" + messages[1])
+	err := os.Remove(getPath(messages[1], cli))
 	if err != nil {
 		log.Printf("%v", err)
 		sendString(statuses[550], conn)
@@ -383,7 +400,7 @@ func mkd(cli *client, conn net.Conn) {
 	messages := strings.Split(cli.message, " ")
 
 	// ファイル追加
-	err := os.Mkdir(cli.currentDir+"/"+messages[1], 0755)
+	err := os.Mkdir(getPath(messages[1], cli), 0755)
 	if err != nil {
 		log.Printf("%v", err)
 		sendString(statuses[550], conn)
@@ -396,7 +413,7 @@ func mdtm(cli *client, conn net.Conn) {
 	messages := strings.Split(cli.message, " ")
 
 	// ファイルの一覧を作成
-	fstat, err := os.Stat(cli.currentDir + "/" + messages[1])
+	fstat, err := os.Stat(getPath(messages[1], cli))
 	if err != nil {
 		log.Printf("%v", err)
 		sendString(statuses[550], conn)
@@ -421,7 +438,7 @@ func chmod(cli *client, conn net.Conn) {
 	}
 
 	// ファイルの一覧を作成
-	err = os.Chmod(cli.currentDir+"/"+messages[3], os.FileMode(mod))
+	err = os.Chmod(getPath(messages[3], cli), os.FileMode(mod))
 	if err != nil {
 		log.Printf("%v", err)
 		sendString(statuses[550], conn)
@@ -480,4 +497,13 @@ func dataHandleConn(conn net.Conn, cli *client) {
 	conn.Close()
 	// 送信終わったので待っているメソッドを終了
 	cli.dataserverch <- struct{}{}
+}
+
+func getPath(path string, cli *client) (fpath string) {
+	if strings.Index(path, "/") == 0 {
+		fpath = cli.rootDir + path
+	} else {
+		fpath = cli.currentDir + "/" + path
+	}
+	return
 }

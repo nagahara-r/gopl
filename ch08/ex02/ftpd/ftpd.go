@@ -93,6 +93,7 @@ func HandleConn(conn net.Conn) {
 	cli.currentDir, _ = os.Getwd()
 	cli.currentDir = cli.currentDir + "/ftpdir"
 	cli.rootDir = cli.currentDir
+	cli.dataserverch = make(chan struct{})
 
 	sendString(statuses[220], conn)
 
@@ -203,7 +204,6 @@ func pasv(cli *client, conn net.Conn) {
 		return
 	}
 
-	cli.dataserverch = make(chan struct{})
 	go dataTransferServer(port, cli)
 	<-cli.dataserverch
 
@@ -212,6 +212,23 @@ func pasv(cli *client, conn net.Conn) {
 }
 
 func port(cli *client, conn net.Conn) {
+	messages := strings.Split(cli.message, " ")
+	ipport := strings.Split(messages[1], ",")
+	ip := strings.Join(ipport[:4], ".")
+	port1, err := strconv.Atoi(ipport[4])
+	if err != nil {
+		log.Printf("%v", err)
+		sendString(statuses[501], conn)
+	}
+	port2, err := strconv.Atoi(ipport[5])
+	if err != nil {
+		log.Printf("%v", err)
+		sendString(statuses[501], conn)
+	}
+	port := (port1 * 256) + port2
+
+	go dataTransferActive(fmt.Sprintf("%v:%v", ip, port), cli)
+	<-cli.dataserverch
 	sendString(statuses[200], conn)
 }
 
@@ -439,9 +456,21 @@ func dataTransferServer(port int, cli *client) {
 	go dataHandleConn(conn, cli) // handle connections concurrently
 }
 
+func dataTransferActive(dst string, cli *client) {
+	log.Printf("[DataTransferActive(%v)]", dst)
+	conn, err := net.Dial("tcp", dst)
+	if err != nil {
+		log.Fatal(err)
+	}
+	cli.dataserverch <- struct{}{}
+
+	go dataHandleConn(conn, cli) // handle connections concurrently
+}
+
 func dataHandleConn(conn net.Conn, cli *client) {
 	// list() などでデータの用意待ち
 	<-cli.dataserverch
+	log.Println("Start Data Transfer")
 	if cli.isPut {
 		// Caution: コピーのエラーを無視
 		io.Copy(cli.writer, conn)

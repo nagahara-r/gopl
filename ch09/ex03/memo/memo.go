@@ -69,13 +69,12 @@ func (memo *Memo) server(f Func) {
 
 	go func(cancelkey chan string) {
 		for {
-			select {
-			case key := <-cancelkey:
-				delete(cache, key)
-				log.Printf("cache deleted: %v", key)
-			}
+			key := <-cancelkey
+			delete(cache, key)
+			log.Printf("cache deleted: %v", key)
 		}
 	}(cancelkey)
+
 	for req := range memo.requests {
 		e := cache[req.key]
 		if e == nil {
@@ -83,10 +82,6 @@ func (memo *Memo) server(f Func) {
 			e = &entry{ready: make(chan struct{})}
 			cache[req.key] = e
 			go e.call(f, req.key, req.done, cancelkey) // call f(key)
-			go func(req request) {
-				<-req.done
-				cancelkey <- req.key
-			}(req)
 		}
 		go e.deliver(req.response)
 	}
@@ -95,6 +90,10 @@ func (memo *Memo) server(f Func) {
 func (e *entry) call(f Func, key string, done chan struct{}, cancelkey chan string) {
 	// Evaluate the function.
 	e.res.value, e.res.err = f(key, done)
+
+	if e.res.err != nil {
+		cancelkey <- key
+	}
 
 	// Broadcast the ready condition.
 	close(e.ready)

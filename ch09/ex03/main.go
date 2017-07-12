@@ -19,11 +19,11 @@ func main() {
 
 	go func() {
 		sc := bufio.NewScanner(os.Stdin)
-		for {
-			for sc.Scan() {
-			}
-			done <- struct{}{}
+		//for {
+		for sc.Scan() {
 		}
+		done <- struct{}{}
+		//}
 	}()
 	memotest.Sequential(nil, m, done)
 }

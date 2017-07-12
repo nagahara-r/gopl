@@ -21,9 +21,14 @@ import (
 	"time"
 )
 
+// User はFTPユーザ名を表す構造体です
+type User struct {
+	User     string
+	Password string
+}
+
 type client struct {
-	user         string
-	password     string
+	user         User
 	message      string
 	writer       io.Writer
 	reader       io.Reader
@@ -51,17 +56,20 @@ var (
 		// 257 は カレントディレクトリを表すのでPWDで作る
 		//257: "257 \"/\" is current directory.\r\n",
 
+		331: "331 Enter Password.\r\n",
 		350: "350 File exists. Ready to Move.\r\n",
 
 		// Errors
 		500: "500 Command not understood.\r\n",
 		501: "501 Parameters or Auguments Parse Error.\r\n",
 		502: "502 Command Not Implemented.\r\n",
+		530: "530 Failed to Login.\r\n",
 		550: "550 Error Due to File Access\r\n",
 	}
 
 	commands = map[string]func(*client, net.Conn){
 		"USER": user,
+		"PASS": pass,
 		"SYST": syst,
 		"FEAT": nonimpl,
 		"TYPE": typef,
@@ -90,10 +98,11 @@ var (
 )
 
 // HandleConn は mainのServerSocketを受け取り、FTPサーバ処理を開始します。
-func HandleConn(conn net.Conn) {
+func HandleConn(conn net.Conn, user User) {
 	cli := new(client)
 
 	// currentDirは自由に決められるようにする
+	cli.user = user
 	cli.currentDir, _ = os.Getwd()
 	cli.currentDir = cli.currentDir + "/ftpdir"
 	cli.rootDir = cli.currentDir
@@ -146,8 +155,21 @@ func readCommand(conn net.Conn) (str string, err error) {
 	return
 }
 
-func user(message *client, conn net.Conn) {
-	// TODO: ユーザログイン
+func user(cli *client, conn net.Conn) {
+	messages := strings.Split(cli.message, " ")
+	if messages[1] != cli.user.User {
+		sendString(statuses[530], conn)
+		return
+	}
+	sendString(statuses[331], conn)
+}
+
+func pass(cli *client, conn net.Conn) {
+	messages := strings.Split(cli.message, " ")
+	if messages[1] != cli.user.Password {
+		sendString(statuses[530], conn)
+		return
+	}
 	sendString(statuses[230], conn)
 }
 
@@ -250,10 +272,12 @@ func port(cli *client, conn net.Conn) {
 }
 
 func list(cli *client, conn net.Conn) {
+	messages := strings.Split(cli.message, " ")
+	messages = append(messages, "")
 	sendString(statuses[150], conn)
 
 	// ファイルの一覧を作成
-	fileinfos, err := ioutil.ReadDir(cli.currentDir)
+	fileinfos, err := ioutil.ReadDir(getPath(messages[1], cli))
 	if err != nil {
 		log.Printf("%v", err)
 		sendString(statuses[550], conn)
@@ -275,10 +299,12 @@ func list(cli *client, conn net.Conn) {
 }
 
 func nlst(cli *client, conn net.Conn) {
+	messages := strings.Split(cli.message, " ")
+	messages = append(messages, "")
 	sendString(statuses[150], conn)
 
 	// ファイルの一覧を作成
-	fileinfos, err := ioutil.ReadDir(cli.currentDir)
+	fileinfos, err := ioutil.ReadDir(getPath(messages[1], cli))
 	if err != nil {
 		log.Printf("%v", err)
 		sendString(statuses[550], conn)

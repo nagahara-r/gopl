@@ -14,7 +14,11 @@ import (
 
 func main() {
 	port := flag.Int("port", 8000, "port number")
+	u := flag.String("u", "anonymous", "user")
+	p := flag.String("p", "", "password")
 	flag.Parse()
+
+	user := ftpd.User{*u, *p}
 
 	listener, err := net.Listen("tcp4", ":"+strconv.Itoa(*port))
 	if err != nil {
@@ -28,7 +32,7 @@ func main() {
 			continue
 		}
 
-		go ftpd.HandleConn(conn) // handle connections concurrently
+		go ftpd.HandleConn(conn, user) // handle connections concurrently
 	}
 	//!-
 }

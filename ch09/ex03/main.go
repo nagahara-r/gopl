@@ -14,7 +14,7 @@ var httpGetBody = memotest.HTTPGetBody
 
 func main() {
 	done := make(chan struct{})
-	m := memo.New(httpGetBody, done)
+	m := memo.New(httpGetBody)
 	defer m.Close()
 
 	go func() {

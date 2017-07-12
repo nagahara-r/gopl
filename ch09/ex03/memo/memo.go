@@ -38,20 +38,21 @@ type entry struct {
 type request struct {
 	key      string
 	response chan<- result // the client wants a single result
+	done     chan struct{}
 }
 
 type Memo struct{ requests chan request }
 
 // New returns a memoization of f.  Clients must subsequently call Close.
-func New(f Func, done chan struct{}) *Memo {
+func New(f Func) *Memo {
 	memo := &Memo{requests: make(chan request)}
-	go memo.server(f, done)
+	go memo.server(f)
 	return memo
 }
 
 func (memo *Memo) Get(key string, done chan struct{}) (interface{}, error) {
 	response := make(chan result)
-	memo.requests <- request{key, response}
+	memo.requests <- request{key, response, done}
 	res := <-response
 	return res.value, res.err
 }
@@ -62,7 +63,7 @@ func (memo *Memo) Close() { close(memo.requests) }
 
 //!+monitor
 
-func (memo *Memo) server(f Func, done chan struct{}) {
+func (memo *Memo) server(f Func) {
 	cache := make(map[string]*entry)
 	cancelkey := make(chan string)
 
@@ -81,7 +82,11 @@ func (memo *Memo) server(f Func, done chan struct{}) {
 			// This is the first request for this key.
 			e = &entry{ready: make(chan struct{})}
 			cache[req.key] = e
-			go e.call(f, req.key, done, cancelkey) // call f(key)
+			go e.call(f, req.key, req.done, cancelkey) // call f(key)
+			go func(req request) {
+				<-req.done
+				cancelkey <- req.key
+			}(req)
 		}
 		go e.deliver(req.response)
 	}
@@ -90,9 +95,6 @@ func (memo *Memo) server(f Func, done chan struct{}) {
 func (e *entry) call(f Func, key string, done chan struct{}, cancelkey chan string) {
 	// Evaluate the function.
 	e.res.value, e.res.err = f(key, done)
-	if e.res.err != nil {
-		cancelkey <- key
-	}
 
 	// Broadcast the ready condition.
 	close(e.ready)

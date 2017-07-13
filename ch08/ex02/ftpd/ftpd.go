@@ -62,7 +62,8 @@ var (
 		// Errors
 		500: "500 Command not understood.\r\n",
 		501: "501 Parameters or Auguments Parse Error.\r\n",
-		502: "502 Command Not Implemented.\r\n",
+		502: "502 Command not Implemented.\r\n",
+		504: "504 Command not Implemented for that Parameter.\r\n",
 		530: "530 Failed to Login.\r\n",
 		550: "550 Error Due to File Access\r\n",
 	}
@@ -73,6 +74,8 @@ var (
 		"SYST": syst,
 		"FEAT": nonimpl,
 		"TYPE": typef,
+		"MODE": mode,
+		"STRU": stru,
 		"CWD":  cwd,
 		"CDUP": cdup,
 		"PWD":  pwd,
@@ -159,6 +162,7 @@ func user(cli *client, conn net.Conn) {
 	messages := strings.Split(cli.message, " ")
 	if messages[1] != cli.user.User {
 		sendString(statuses[530], conn)
+		conn.Close()
 		return
 	}
 	sendString(statuses[331], conn)
@@ -168,6 +172,7 @@ func pass(cli *client, conn net.Conn) {
 	messages := strings.Split(cli.message, " ")
 	if messages[1] != cli.user.Password {
 		sendString(statuses[530], conn)
+		conn.Close()
 		return
 	}
 	sendString(statuses[230], conn)
@@ -178,9 +183,38 @@ func syst(message *client, conn net.Conn) {
 }
 
 func typef(cli *client, conn net.Conn) {
+	messages := strings.Split(cli.message, " ")
 	// Caution: 本当はASCIIモードと判別しないといけない
-	// 全部バイナリモードとして動く
-	sendString(statuses[200], conn)
+	if messages[1] == "A" || messages[1] == "I" {
+		sendString(statuses[200], conn)
+		return
+	}
+
+	sendString(statuses[504], conn)
+}
+
+func mode(cli *client, conn net.Conn) {
+	messages := strings.Split(cli.message, " ")
+
+	// Streamモードのみサポート
+	if messages[1] == "S" {
+		sendString(statuses[200], conn)
+		return
+	}
+
+	sendString(statuses[504], conn)
+}
+
+func stru(cli *client, conn net.Conn) {
+	messages := strings.Split(cli.message, " ")
+
+	// Fileモードのみサポート
+	if messages[1] == "F" {
+		sendString(statuses[200], conn)
+		return
+	}
+
+	sendString(statuses[504], conn)
 }
 
 func nonimpl(cli *client, conn net.Conn) {

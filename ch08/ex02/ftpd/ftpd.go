@@ -182,7 +182,8 @@ func syst(message *client, conn net.Conn) {
 
 func typef(cli *client, conn net.Conn) {
 	messages := strings.Split(cli.message, " ")
-	// Caution: 本当はASCIIモードと判別しないといけない
+	// ASCIIモードの場合、サーバ側の改行コードに変換する必要があるが、
+	// OS側でたいてい対応しているので、とくに変換対応していない。
 	if messages[1] == "A" || messages[1] == "I" {
 		sendString(statuses[200], conn)
 		return

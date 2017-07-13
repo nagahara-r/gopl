@@ -1,9 +1,6 @@
 // Copyright © 2017 Yuki Nagahara
 // 練習8-2: FTPサーバの実装
 
-// 現状の制約リスト：
-// ログイン機能はありません（何を入力しても匿名ユーザとしてログイン）
-
 package ftpd
 
 import (

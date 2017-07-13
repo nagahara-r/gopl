@@ -94,6 +94,7 @@ var (
 		"MKD":  mkd,
 		"MDTM": mdtm,
 		"SITE": chmod,
+		"NOOP": noop,
 		"QUIT": quit,
 	}
 
@@ -505,6 +506,10 @@ func chmod(cli *client, conn net.Conn) {
 		return
 	}
 	sendString(statuses[250], conn)
+}
+
+func noop(cli *client, conn net.Conn) {
+	sendString(statuses[200], conn)
 }
 
 func quit(cli *client, conn net.Conn) {

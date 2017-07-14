@@ -23,7 +23,7 @@ func TestElems(t *testing.T) {
 			[]int{0, 3, 4, 5, 12, 13},
 		}, {
 			IntSet{[]uint{0, 1, 0, 0, 0}},
-			[]int{64},
+			[]int{uintSize},
 		}, {
 			IntSet{nil},
 			[]int{},
@@ -238,7 +238,7 @@ func TestRemove(t *testing.T) {
 			IntSet{[]uint{0}},
 		}, {
 			IntSet{[]uint{1, 1}},
-			64,
+			uintSize,
 			IntSet{[]uint{1, 0}},
 		}, {
 			IntSet{[]uint{0, 1}},

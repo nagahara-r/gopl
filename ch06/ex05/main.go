@@ -5,7 +5,7 @@ package main
 import (
 	"fmt"
 
-	"./intset"
+	"github.com/naga718/golang-practice/ch06/ex05/intset"
 )
 
 func main() {

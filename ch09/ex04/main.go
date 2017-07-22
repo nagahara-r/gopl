@@ -48,8 +48,7 @@ func main() {
 }
 
 func pipeline(receive chan struct{}, send chan struct{}) {
-	<-receive
-	send <- struct{}{}
+	send <- <-receive
 }
 
 func printMemPeriodically(second int64) {

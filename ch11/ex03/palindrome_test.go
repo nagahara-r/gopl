@@ -1,3 +1,6 @@
+// Copyright © 2017 Yuki Nagahara
+// 練習11-3: IsPalindrome を回文でないことをテストします。
+
 package palindrome
 
 import (

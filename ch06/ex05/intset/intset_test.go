@@ -51,6 +51,79 @@ func comp(a []int, b []int) bool {
 	return true
 }
 
+func TestHas(t *testing.T) {
+	tests := []struct {
+		input    IntSet
+		target   int
+		expected bool
+	}{
+		{
+			IntSet{[]uint{3}},
+			0,
+			true,
+		}, {
+			IntSet{[]uint{2046}}, // 11111111110
+			10,
+			true,
+		}, {
+			IntSet{[]uint{3000}}, //  101110111000
+			6,
+			false,
+		}, {
+			IntSet{[]uint{}},
+			0,
+			false,
+		}, {
+			IntSet{nil},
+			0,
+			false,
+		},
+	}
+
+	for _, test := range tests {
+		if test.expected != test.input.Has(test.target) {
+			t.Errorf("IntSet= %v, Has() = %v", test.input, test.input.Has(test.target))
+		}
+	}
+}
+
+func TestUnionWith(t *testing.T) {
+	tests := []struct {
+		input    IntSet
+		target   IntSet
+		expected string
+	}{
+		{
+			IntSet{[]uint{3}},
+			IntSet{[]uint{2}},
+			"{0 1}",
+		}, {
+			IntSet{[]uint{2046}}, // 11111111110
+			IntSet{[]uint{555}},  //  1000101011
+			"{0 1 2 3 4 5 6 7 8 9 10}",
+		}, {
+			IntSet{[]uint{2047}}, //   11111111111
+			IntSet{[]uint{3000}}, //  101110111000
+			"{0 1 2 3 4 5 6 7 8 9 10 11}",
+		}, {
+			IntSet{[]uint{}},
+			IntSet{[]uint{3000}}, //  101110111000
+			"{3 4 5 7 8 9 11}",
+		}, {
+			IntSet{nil},
+			IntSet{[]uint{3000}}, //  101110111000
+			"{3 4 5 7 8 9 11}",
+		},
+	}
+
+	for _, test := range tests {
+		test.input.UnionWith(&test.target)
+		if test.expected != test.input.String() {
+			t.Errorf("expected = %v, UnionWith() = %v", test.expected, test.input.String())
+		}
+	}
+}
+
 func TestIntersectWith(t *testing.T) {
 	tests := []struct {
 		input    IntSet

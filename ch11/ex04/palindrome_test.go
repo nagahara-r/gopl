@@ -24,6 +24,15 @@ func randomPalindrome(rng *rand.Rand) string {
 }
 
 func insertSkipLiteral(rng *rand.Rand, runes []rune) (inserted []rune) {
+	skipliterals := map[int]rune{
+		0: ' ',
+		1: '　',
+		2: ',',
+		3: '\n',
+		4: '、',
+		5: '。',
+	}
+
 	if len(runes) <= 0 {
 		return runes
 	}
@@ -32,11 +41,7 @@ func insertSkipLiteral(rng *rand.Rand, runes []rune) (inserted []rune) {
 
 	for i := 0; i < n; i++ {
 		ri := rng.Intn(len(runes))
-		literal := ' '
-		if ri%2 == 0 {
-			// 空白か句読点かをランダムに
-			literal = ','
-		}
+		literal := skipliterals[ri%6]
 
 		inserted = append(inserted, runes[:ri]...)
 		inserted = append(inserted, literal)

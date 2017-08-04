@@ -5,38 +5,82 @@ import (
 )
 
 func TestPopCount(t *testing.T) {
-	want := 32
-	result := PopCount(0x1234567890ABCDEF)
+	tests := []struct {
+		input    uint64
+		expected int
+	}{
+		{0, 0},
+		{0x1, 1},
+		{0x3, 2},
+		{0x1234567890ABCDEF, 32},
+		{0xFFFFFFFFFFFFFFFF, 64},
+	}
 
-	if want != result {
-		t.Errorf("want = %v, result = %v", want, result)
+	for _, test := range tests {
+		result := PopCount(test.input)
+		if result != test.expected {
+			t.Errorf("PopCount(%v) = %v, want = %v", test.input, result, test.expected)
+		}
 	}
 }
 
 func TestPopCountByLoop(t *testing.T) {
-	want := 32
-	result := PopCountByLoop(0x1234567890ABCDEF)
+	tests := []struct {
+		input    uint64
+		expected int
+	}{
+		{0, 0},
+		{0x1, 1},
+		{0x3, 2},
+		{0x1234567890ABCDEF, 32},
+		{0xFFFFFFFFFFFFFFFF, 64},
+	}
 
-	if want != result {
-		t.Errorf("want = %v, result = %v", want, result)
+	for _, test := range tests {
+		result := PopCountByLoop(test.input)
+		if result != test.expected {
+			t.Errorf("PopCountByLoop(%v) = %v, want = %v", test.input, result, test.expected)
+		}
 	}
 }
 
 func TestPopCountByBitshift(t *testing.T) {
-	want := 32
-	result := PopCountByBitshift(0x1234567890ABCDEF)
+	tests := []struct {
+		input    uint64
+		expected int
+	}{
+		{0, 0},
+		{0x1, 1},
+		{0x3, 2},
+		{0x1234567890ABCDEF, 32},
+		{0xFFFFFFFFFFFFFFFF, 64},
+	}
 
-	if want != result {
-		t.Errorf("want = %v, result = %v", want, result)
+	for _, test := range tests {
+		result := PopCountByBitshift(test.input)
+		if result != test.expected {
+			t.Errorf("PopCountByBitshift(%v) = %v, want = %v", test.input, result, test.expected)
+		}
 	}
 }
 
 func TestPopCountByBitclear(t *testing.T) {
-	want := 32
-	result := PopCountByBitshift(0x1234567890ABCDEF)
+	tests := []struct {
+		input    uint64
+		expected int
+	}{
+		{0, 0},
+		{0x1, 1},
+		{0x3, 2},
+		{0x1234567890ABCDEF, 32},
+		{0xFFFFFFFFFFFFFFFF, 64},
+	}
 
-	if want != result {
-		PopCountByBitclear(0x1234567890ABCDEF)
+	for _, test := range tests {
+		result := PopCountByBitclear(test.input)
+		if result != test.expected {
+			t.Errorf("PopCountByBitclear(%v) = %v, want = %v", test.input, result, test.expected)
+		}
 	}
 }
 

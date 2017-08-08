@@ -2,54 +2,13 @@
 
 package intset
 
-import "testing"
+import (
+	"math/rand"
+	"testing"
+	"time"
+)
 
-func TestElems(t *testing.T) {
-	tests := []struct {
-		input    IntSet
-		expected []int
-	}{
-		{
-			IntSet{[]uint{1}}, // 1
-			[]int{0},
-		}, {
-			IntSet{[]uint{2046}}, // 11111111110
-			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
-		}, {
-			IntSet{[]uint{2047}}, //   11111111111
-			[]int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
-		}, {
-			IntSet{[]uint{12345}}, // 11000000111001
-			[]int{0, 3, 4, 5, 12, 13},
-		}, {
-			IntSet{[]uint{0, 1, 0, 0, 0}},
-			[]int{uintSize},
-		}, {
-			IntSet{nil},
-			[]int{},
-		},
-	}
-
-	for _, test := range tests {
-		if !comp(test.expected, test.input.Elems()) {
-			t.Errorf("expected = %v, Elems() = %v", test.expected, test.input.Elems())
-		}
-	}
-}
-
-func comp(a []int, b []int) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-
-	return true
-}
+// Tests
 
 func TestHas(t *testing.T) {
 	tests := []struct {
@@ -83,6 +42,26 @@ func TestHas(t *testing.T) {
 	for _, test := range tests {
 		if test.expected != test.input.Has(test.target) {
 			t.Errorf("IntSet= %v, Has() = %v", test.input, test.input.Has(test.target))
+		}
+	}
+}
+
+func TestAdd(t *testing.T) {
+	tests := []struct {
+		input    int
+		expected IntSet
+	}{
+		{0, IntSet{[]uint{1}}},
+		{1, IntSet{[]uint{2}}},
+		{0xFF, IntSet{[]uint{0, 0, 0, 0x8000000000000000}}},
+	}
+
+	for _, test := range tests {
+		var iset IntSet
+		iset.Add(test.input)
+
+		if !compIntSet(iset, test.expected) {
+			t.Errorf("Add(%v) = %x, but expected %x", test.input, iset, test.expected)
 		}
 	}
 }
@@ -389,6 +368,159 @@ func TestCopy(t *testing.T) {
 			t.Errorf("expected = %v, Copy() = %v", test.input, test.input)
 		}
 	}
+}
+
+func TestElems(t *testing.T) {
+	tests := []struct {
+		input    IntSet
+		expected []int
+	}{
+		{
+			IntSet{[]uint{1}}, // 1
+			[]int{0},
+		}, {
+			IntSet{[]uint{2046}}, // 11111111110
+			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+		}, {
+			IntSet{[]uint{2047}}, //   11111111111
+			[]int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+		}, {
+			IntSet{[]uint{12345}}, // 11000000111001
+			[]int{0, 3, 4, 5, 12, 13},
+		}, {
+			IntSet{[]uint{0, 1, 0, 0, 0}},
+			[]int{uintSize},
+		}, {
+			IntSet{nil},
+			[]int{},
+		},
+	}
+
+	for _, test := range tests {
+		if !comp(test.expected, test.input.Elems()) {
+			t.Errorf("expected = %v, Elems() = %v", test.expected, test.input.Elems())
+		}
+	}
+}
+
+//
+//
+// Benches
+//
+//
+func benchmarkHas(b *testing.B, num int) {
+	intset := IntSet{}
+	// 擬似乱数生成器を初期化する
+	seed := time.Now().UTC().UnixNano()
+	rng := rand.New(rand.NewSource(seed))
+
+	for i := 0; i < b.N; i++ {
+		intset.Has(rng.Intn(num))
+	}
+}
+
+func BenchmarkHas1000(b *testing.B) {
+	benchmarkHas(b, 1000)
+}
+
+func BenchmarkHas100000000(b *testing.B) {
+	benchmarkHas(b, 100000000)
+}
+
+func benchmarkHasMap(b *testing.B, num int) {
+	intset := map[int]bool{}
+	// 擬似乱数生成器を初期化する
+	seed := time.Now().UTC().UnixNano()
+	rng := rand.New(rand.NewSource(seed))
+
+	for i := 0; i < b.N; i++ {
+		_ = intset[rng.Intn(num)]
+	}
+}
+
+func BenchmarkHasMap1000(b *testing.B) {
+	benchmarkHasMap(b, 1000)
+}
+
+func BenchmarkHasMap100000000(b *testing.B) {
+	benchmarkHasMap(b, 100000000)
+}
+
+func benchmarkAdd(b *testing.B, num int) {
+	intset := IntSet{}
+	// 擬似乱数生成器を初期化する
+	seed := time.Now().UTC().UnixNano()
+	rng := rand.New(rand.NewSource(seed))
+
+	for i := 0; i < b.N; i++ {
+		intset.Add(rng.Intn(num))
+	}
+}
+
+func BenchmarkAdd1000(b *testing.B) {
+	benchmarkAdd(b, 1000)
+}
+
+func BenchmarkAdd100000000(b *testing.B) {
+	benchmarkAdd(b, 100000000)
+}
+
+// func benchmarkAddTuned(b *testing.B, num int) {
+// 	intset := IntSet{}
+// 	// 擬似乱数生成器を初期化する
+// 	seed := time.Now().UTC().UnixNano()
+// 	rng := rand.New(rand.NewSource(seed))
+//
+// 	for i := 0; i < b.N; i++ {
+// 		intset.AddTuned(rng.Intn(num))
+// 	}
+// }
+//
+// func BenchmarkAddTuned1000(b *testing.B) {
+// 	benchmarkAddTuned(b, 1000)
+// }
+//
+// func BenchmarkAddTuned100000000(b *testing.B) {
+// 	benchmarkAddTuned(b, 100000000)
+// }
+
+func benchmarkAddMap(b *testing.B, num int) {
+	intset := map[int]bool{}
+	// 擬似乱数生成器を初期化する
+	seed := time.Now().UTC().UnixNano()
+	rng := rand.New(rand.NewSource(seed))
+
+	for i := 0; i < b.N; i++ {
+		intset[rng.Intn(num)] = true
+	}
+}
+
+func BenchmarkAddMap1000(b *testing.B) {
+	benchmarkAddMap(b, 1000)
+}
+
+func BenchmarkAddMap100000000(b *testing.B) {
+	benchmarkAddMap(b, 100000000)
+}
+
+//
+//
+// Compares
+//
+//
+
+func comp(a []int, b []int) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+
+	return true
 }
 
 func compIntSet(a IntSet, b IntSet) bool {

@@ -1,7 +1,7 @@
 // Copyright © 2017 Yuki Nagahara
 // 練習11-4: IsPalindrome が句読点や空白を処理することをテストします。
 
-package palindrome
+package word
 
 import (
 	"math/rand"

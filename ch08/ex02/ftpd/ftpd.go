@@ -300,10 +300,20 @@ func port(cli *client, conn net.Conn) {
 func list(cli *client, conn net.Conn) {
 	messages := strings.Split(cli.message, " ")
 	messages = append(messages, "")
+
+	patharg := 1
+	all := false
+	for ; strings.Index(messages[patharg], "-") == 0; patharg++ {
+		// All かどうか。
+		if strings.Contains(messages[patharg], "a") {
+			all = true
+		}
+	}
+
 	sendString(statuses[150], conn)
 
 	// ファイルの一覧を作成
-	dpath, err := getPath(messages[1], cli)
+	dpath, err := getPath(messages[patharg], cli)
 	if err != nil {
 		log.Printf("%v", err)
 		// データサーバに失敗送信
@@ -322,6 +332,29 @@ func list(cli *client, conn net.Conn) {
 	}
 
 	message := ""
+	if all {
+		curdir, err := os.Stat(cli.currentDir)
+		if err != nil {
+			log.Printf("%v", err)
+			// データサーバに失敗送信
+			cli.dataserverch <- false
+			sendString(statuses[550], conn)
+			return
+		}
+		message += fmt.Sprintf("%v 0 owner %v %v %v\r\n", curdir.Mode().String(), curdir.Size(), curdir.ModTime().Format("Jan 2 15:04"), ".")
+
+		if cli.currentDir != cli.rootDir {
+			rootdir, err := os.Stat(cli.rootDir)
+			if err != nil {
+				log.Printf("%v", err)
+				// データサーバに失敗送信
+				cli.dataserverch <- false
+				sendString(statuses[550], conn)
+				return
+			}
+			message += fmt.Sprintf("%v 0 owner %v %v %v\r\n", rootdir.Mode().String(), rootdir.Size(), rootdir.ModTime().Format("Jan 2 15:04"), "..")
+		}
+	}
 	for _, fileinfo := range fileinfos {
 		message += fmt.Sprintf("%v 0 owner %v %v %v\r\n", fileinfo.Mode().String(), fileinfo.Size(), fileinfo.ModTime().Format("Jan 2 15:04"), fileinfo.Name())
 	}
@@ -655,15 +688,17 @@ func dataHandleConn(conn net.Conn, cli *client) {
 
 func getPath(path string, cli *client) (fpath string, err error) {
 	if strings.Index(path, "/") == 0 {
-		fpath = cli.rootDir + path
+		fpath, err = filepath.Abs(cli.rootDir + path)
 	} else {
 		fpath, err = filepath.Abs(cli.currentDir + "/" + path)
-		if err != nil {
-			return
-		}
-		if len(fpath) < len(cli.rootDir) {
-			return fpath, fmt.Errorf("Access Denied")
-		}
+	}
+
+	if err != nil {
+		return
+	}
+
+	if len(fpath) < len(cli.rootDir) {
+		return fpath, fmt.Errorf("Access Denied")
 	}
 	return
 }

@@ -23,6 +23,11 @@ func Unzip(zipfile string, dir string) (err error) {
 	return
 }
 
+// 下記は image/format.go を参考に作成しました。
+// Copyright 2010 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 // RegisterFormat はFormatを登録します。
 func RegisterFormat(name, magic string, unzip func(string, string) error) {
 	formats = append(formats, format{name, magic, unzip})

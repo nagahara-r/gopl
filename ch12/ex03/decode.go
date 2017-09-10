@@ -3,6 +3,7 @@
 
 // Copyright © 2017 Yuki Nagahara
 // 練習12-3: float, complex, bool, chan, func, interface の実装をします。
+// 練習12-7: S式のストリームデコーダを作成します。
 
 // See page 344.
 
@@ -13,6 +14,8 @@ package sexpr
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"reflect"
 	"strconv"
 	"strings"
@@ -70,6 +73,34 @@ var reflectTypes = map[string]reflect.Type{
 	// 以下はマーシャリングできない
 	// "chan":           reflect.Chan,
 	// "func":           reflect.Func,
+}
+
+// A Decoder reads and decodes S-expression values from an input stream.
+// 練習12-7
+type Decoder struct {
+	r   io.Reader
+	buf []byte
+}
+
+// NewDecoder は新しいデコーダをリーダから作成します。
+// 練習12-7
+func NewDecoder(r io.Reader) *Decoder {
+	return &Decoder{r: r}
+}
+
+// Decode はリーダからS式をデコードします。
+// 練習12-7
+func (dec *Decoder) Decode(i interface{}) (err error) {
+	data, err := ioutil.ReadAll(dec.r)
+	if err != nil {
+		return err
+	}
+	err = Unmarshal(data, i)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 //!+Unmarshal

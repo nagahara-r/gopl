@@ -3,6 +3,7 @@
 
 // Copyright © 2017 Yuki Nagahara
 // 練習12-3: float, complex, bool, chan, func, interface の実装をします。
+// 練習12-6: ゼロ値の場合はエンコーディングしないように修正します。
 
 // See page 339.
 
@@ -62,6 +63,13 @@ func encode(buf *bytes.Buffer, v reflect.Value) error {
 	case reflect.Struct: // ((name value) ...)
 		buf.WriteByte('(')
 		for i := 0; i < v.NumField(); i++ {
+
+			// 練習12-6
+			// ゼロ値かどうか比較、ゼロ値でなければエンコーディングしない
+			if reflect.DeepEqual(v.Field(i).Interface(), reflect.Zero(v.Field(i).Type()).Interface()) {
+				continue
+			}
+
 			if i > 0 {
 				buf.WriteByte(' ')
 			}

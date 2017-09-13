@@ -2,8 +2,7 @@
 // License: https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 // Copyright © 2017 Yuki Nagahara
-// 練習12-7: S式のストリームデコーダを作成します。
-// 練習12-10: デコーダを練習12-3のエンコーダに対応させます。
+// 練習12-9: S式をトークンに分けてデコードする関数を作成します。
 
 // See page 344.
 
@@ -15,92 +14,65 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"reflect"
 	"strconv"
-	"strings"
 	"text/scanner"
-	"unsafe"
 )
 
-var reflectTypes = map[string]reflect.Type{
-	// "invalid":        reflect.TypeOf(nil),
-	"bool":       reflect.TypeOf(bool(true)),
-	"int":        reflect.TypeOf(int(0)),
-	"int8":       reflect.TypeOf(int8(0)),
-	"int16":      reflect.TypeOf(int16(0)),
-	"int32":      reflect.TypeOf(int32(0)),
-	"int64":      reflect.TypeOf(int64(0)),
-	"uint":       reflect.TypeOf(uint(0)),
-	"uint8":      reflect.TypeOf(uint8(0)),
-	"uint16":     reflect.TypeOf(uint16(0)),
-	"uint32":     reflect.TypeOf(uint32(0)),
-	"uint64":     reflect.TypeOf(uint64(0)),
-	"uintptr":    reflect.TypeOf(uintptr(0)),
-	"float32":    reflect.TypeOf(float32(0)),
-	"float64":    reflect.TypeOf(float64(0)),
-	"complex64":  reflect.TypeOf(complex64(0)),
-	"complex128": reflect.TypeOf(complex128(0)),
-	"string":     reflect.TypeOf(""),
-	//"unsafe":     reflect.TypeOf(unsafe.Pointer(uintptr(0))),
-
-	// Slice は型が基本形であればSliceにすることでサポートする。
-	"[]bool":           reflect.TypeOf([]bool{}),
-	"[]int":            reflect.TypeOf([]int{}),
-	"[]int8":           reflect.TypeOf([]int8{}),
-	"[]int16":          reflect.TypeOf([]int16{}),
-	"[]int32":          reflect.TypeOf([]int32{}),
-	"[]int64":          reflect.TypeOf([]int64{}),
-	"[]uint":           reflect.TypeOf([]uint{}),
-	"[]uint8":          reflect.TypeOf([]uint8{}),
-	"[]uint16":         reflect.TypeOf([]uint16{}),
-	"[]uint32":         reflect.TypeOf([]uint32{}),
-	"[]uint64":         reflect.TypeOf([]uint64{}),
-	"[]uintptr":        reflect.TypeOf([]uintptr{}),
-	"[]float32":        reflect.TypeOf([]float32{}),
-	"[]float64":        reflect.TypeOf([]float64{}),
-	"[]complex64":      reflect.TypeOf([]complex64{}),
-	"[]complex128":     reflect.TypeOf([]complex128{}),
-	"[]string":         reflect.TypeOf([]string{}),
-	"[]unsafe.Pointer": reflect.TypeOf([]unsafe.Pointer{}),
-
-	// 以下は型へのマッピングが困難なため非サポート
-	// "array"
-	// "interface":      reflect.Interface,
-	// "map":            reflect.Map,
-	// "struct":         struct{},
-
-	// 以下はマーシャリングできない
-	// "chan":           reflect.Chan,
-	// "func":           reflect.Func,
-}
-
-// A Decoder reads and decodes S-expression values from an input stream.
-// 練習12-7
+// A Decoder represents an S-Expression parser reading a particular input stream.
+// The parser assumes that its input is encoded in UTF-8.
 type Decoder struct {
 	r   io.Reader
 	buf []byte
+
+	lex *lexer
 }
+
+type Token interface{}
+
+type Symbol string
+type String string
+type Int int
+type StartList rune
+type EndList rune
 
 // NewDecoder は新しいデコーダをリーダから作成します。
 // 練習12-7
 func NewDecoder(r io.Reader) *Decoder {
-	return &Decoder{r: r}
+	d := &Decoder{r: r}
+	d.lex = &lexer{scan: scanner.Scanner{Mode: scanner.GoTokens}}
+	d.lex.scan.Init(d.r)
+	return d
 }
 
-// Decode はリーダからS式をデコードします。
-// 練習12-7
-func (dec *Decoder) Decode(i interface{}) (err error) {
-	data, err := ioutil.ReadAll(dec.r)
-	if err != nil {
-		return err
+func (d *Decoder) Token() (Token, error) {
+	d.lex.next()
+	switch d.lex.token {
+	case scanner.EOF:
+		return nil, io.EOF
+	case scanner.Ident:
+		// The only valid identifiers are
+		// "nil" and struct field names.
+		if d.lex.text() == "nil" {
+			return Symbol("nil"), nil
+		} else {
+			return Symbol(d.lex.text()), nil
+		}
+	case scanner.String:
+		s, _ := strconv.Unquote(d.lex.text()) // NOTE: ignoring errors
+		return String(s), nil
+	case scanner.Int:
+		i, _ := strconv.Atoi(d.lex.text()) // NOTE: ignoring errors
+		return Int(i), nil
+	case '(':
+		//readList(lex, v)
+		return StartList('('), nil
+	case ')':
+		//readList(lex, v)
+		return EndList(')'), nil
 	}
-	err = Unmarshal(data, i)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return nil, fmt.Errorf("unexpected token %q", d.lex.text())
+	//return nil, nil
 }
 
 //!+Unmarshal
@@ -171,24 +143,15 @@ func read(lex *lexer, v reflect.Value) {
 			v.Set(reflect.Zero(v.Type()))
 			lex.next()
 			return
-		} else if lex.text() == "false" || lex.text() == "true" {
-			b, _ := strconv.ParseBool(lex.text())
-			v.SetBool(b)
-			lex.next()
-			return
 		}
 	case scanner.String:
 		s, _ := strconv.Unquote(lex.text()) // NOTE: ignoring errors
 		v.SetString(s)
 		lex.next()
 		return
-	case '-':
-		lex.next()
-		setNumber("-"+lex.text(), lex, v)
-		lex.next()
-		return
-	case scanner.Int, scanner.Float:
-		setNumber(lex.text(), lex, v)
+	case scanner.Int:
+		i, _ := strconv.Atoi(lex.text()) // NOTE: ignoring errors
+		v.SetInt(int64(i))
 		lex.next()
 		return
 	case '(':
@@ -196,39 +159,8 @@ func read(lex *lexer, v reflect.Value) {
 		readList(lex, v)
 		lex.next() // consume ')'
 		return
-	case '#':
-		lex.next() // C
-		if lex.text() == "C" {
-			lex.next() // (
-			lex.next() // 1.00000
-			real, _ := strconv.ParseFloat(lex.text(), 64)
-			lex.next() // ,
-			lex.next() // 2.00000
-			imag, _ := strconv.ParseFloat(lex.text(), 64)
-			v.SetComplex(complex(real, imag))
-
-			lex.next()
-		} else if lex.text() == "I" {
-			lex.next() // (
-			lex.next() // Type
-			readList(lex, v)
-		}
-		lex.next() // consume ')'
-		return
 	}
 	panic(fmt.Sprintf("unexpected token %q", lex.text()))
-}
-
-func setNumber(str string, lex *lexer, v reflect.Value) {
-	switch lex.token {
-	case scanner.Int:
-		i, _ := strconv.ParseInt(str, 0, 64) // NOTE: ignoring errors
-		//i, _ := strconv.Atoi(lex.text()) // NOTE: ignoring errors
-		v.SetInt(int64(i))
-	case scanner.Float:
-		f, _ := strconv.ParseFloat(lex.text(), 64) // NOTE: ignoring errors
-		v.SetFloat(f)
-	}
 }
 
 //!-read
@@ -271,14 +203,6 @@ func readList(lex *lexer, v reflect.Value) {
 			v.SetMapIndex(key, value)
 			lex.consume(')')
 		}
-
-	case reflect.Interface:
-		l := strings.Trim(lex.text(), "\"")
-		iv := reflect.New(reflectTypes[l]).Elem()
-
-		lex.next()
-		read(lex, iv)
-		v.Set(iv)
 
 	default:
 		panic(fmt.Sprintf("cannot decode list into %v", v.Type()))

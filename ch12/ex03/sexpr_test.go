@@ -31,6 +31,8 @@ func Test(t *testing.T) {
 
 		Award      bool
 		ComplexNum complex64
+		ZeroValue  int
+		ZeroStruct struct{}
 
 		Description interface{}
 	}

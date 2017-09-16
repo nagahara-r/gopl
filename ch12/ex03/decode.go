@@ -4,6 +4,7 @@
 // Copyright © 2017 Yuki Nagahara
 // 練習12-7: S式のストリームデコーダを作成します。
 // 練習12-10: デコーダを練習12-3のエンコーダに対応させます。
+// 練習12-13: フィールドタグを処理するように修正します。
 
 // See page 344.
 
@@ -256,7 +257,9 @@ func readList(lex *lexer, v reflect.Value) {
 			}
 			name := lex.text()
 			lex.next()
-			read(lex, v.FieldByName(name))
+
+			// 練習12-13: フィールドタグを見てデコードします。
+			read(lex, v.FieldByName(nameByTag(name, v)))
 			lex.consume(')')
 		}
 

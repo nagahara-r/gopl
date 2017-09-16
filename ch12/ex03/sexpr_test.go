@@ -27,9 +27,11 @@ func Test(t *testing.T) {
 		Year            int
 		Actor           map[string]string
 		Oscars          []string
-		Sequel          *string
+		// Sequel はsexprでマーシャリングされません。
+		Sequel *string `sexpr:"-"`
 
-		Award      bool
+		// Award はisgetawardという名前でマーシャリングされます。
+		Award      bool `sexpr:"isgetaward"`
 		ComplexNum complex64
 		ZeroValue  int
 		ZeroStruct struct{}

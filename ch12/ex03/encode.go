@@ -4,6 +4,7 @@
 // Copyright © 2017 Yuki Nagahara
 // 練習12-3: float, complex, bool, chan, func, interface の実装をします。
 // 練習12-6: ゼロ値の場合はエンコーディングしないように修正します。
+// 練習12-13: フィールドタグを処理するように修正します。
 
 // See page 339.
 
@@ -70,10 +71,17 @@ func encode(buf *bytes.Buffer, v reflect.Value) error {
 				continue
 			}
 
+			// 練習12-13: フィールドタグを見て、そのタグ名でエンコードします。
+			name := getFieldName(v.Type().Field(i))
+			if name == "-" {
+				// 値を完全無視する
+				continue
+			}
+
 			if i > 0 {
 				buf.WriteByte(' ')
 			}
-			fmt.Fprintf(buf, "(%s ", v.Type().Field(i).Name)
+			fmt.Fprintf(buf, "(%s ", name)
 			if err := encode(buf, v.Field(i)); err != nil {
 				return err
 			}

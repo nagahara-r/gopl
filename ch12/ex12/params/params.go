@@ -26,16 +26,16 @@ var (
 	ErrMailAddress = fmt.Errorf("Invalid MailAddress")
 	// ErrCreditCardNumber はクレジットカード番号の形式が正しくありません。
 	ErrCreditCardNumber = fmt.Errorf("Invalid CreditCard Number")
-)
 
-// Pack は与えられた構造体からリクエストURLを作成し返却します。
-func Pack(url string, ptr interface{}) (request string, err error) {
-	validationFuncs := map[string]func(string) error{
+	validationFuncs = map[string]func(string) error{
 		"zipcode":     vzipcode,
 		"mailaddress": vmailaddress,
 		"creditcard":  vcreditcard,
 	}
+)
 
+// Pack は与えられた構造体からリクエストURLを作成し返却します。
+func Pack(url string, ptr interface{}) (request string, err error) {
 	// Build map of fields keyed by effective name.
 	fields := make(map[string]reflect.Value)
 	v := reflect.ValueOf(ptr).Elem() // the struct variable
@@ -138,30 +138,41 @@ func vcreditcard(str string) error {
 // Unpack populates the fields of the struct pointed to by ptr
 // from the HTTP request parameters in req.
 func Unpack(req *http.Request, ptr interface{}) error {
+	type FieldFunc struct {
+		field          reflect.Value
+		validationFunc func(string) error
+	}
+
 	if err := req.ParseForm(); err != nil {
 		return err
 	}
 
 	// Build map of fields keyed by effective name.
-	fields := make(map[string]reflect.Value)
+	fieldfuncs := make(map[string]FieldFunc)
 	v := reflect.ValueOf(ptr).Elem() // the struct variable
 	for i := 0; i < v.NumField(); i++ {
-		fieldInfo := v.Type().Field(i) // a reflect.StructField
-		tag := fieldInfo.Tag           // a reflect.StructTag
-		name := tag.Get("http")
-		if name == "" {
-			name = strings.ToLower(fieldInfo.Name)
+		fieldtags := getFieldTags(v.Type().Field(i))
+		fieldfunc := FieldFunc{}
+		if len(fieldtags) > 1 {
+			fieldfunc.validationFunc = validationFuncs[fieldtags[1]]
 		}
-		fields[name] = v.Field(i)
+		fieldfunc.field = v.Field(i)
+
+		fieldfuncs[fieldtags[0]] = fieldfunc
 	}
 
 	// Update struct field for each parameter in the request.
 	for name, values := range req.Form {
-		f := fields[name]
+		f := fieldfuncs[name].field
 		if !f.IsValid() {
 			continue // ignore unrecognized HTTP parameters
 		}
 		for _, value := range values {
+			if fieldfuncs[name].validationFunc != nil {
+				if err := fieldfuncs[name].validationFunc(value); err != nil {
+					return fmt.Errorf("%s: %v", name, err)
+				}
+			}
 			if f.Kind() == reflect.Slice {
 				elem := reflect.New(f.Type().Elem()).Elem()
 				if err := populate(elem, value); err != nil {

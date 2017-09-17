@@ -10,8 +10,7 @@ import (
 )
 
 type writer struct {
-	w      io.Writer // underlying output stream
-	outbuf [64 * 1024]byte
+	w io.Writer // underlying output stream
 }
 
 // NewWriter returns a writer for bzip2-compressed streams.
@@ -36,12 +35,12 @@ func (w *writer) Write(data []byte) (int, error) {
 		return int(written), err
 	}
 
-	for writesize := int64(0); writesize < written; {
-		n, err := w.w.Write(out)
+	for writesize := 0; writesize < len(out); {
+		n, err := w.w.Write(out[writesize:])
 		if err != nil {
 			return n, err
 		}
-		writesize += int64(n)
+		writesize += n
 	}
 
 	return int(written), nil

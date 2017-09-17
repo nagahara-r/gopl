@@ -30,7 +30,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		w, err := os.Create("out/" + strconv.Itoa(i) + ".bin")
+		w, err := os.Create("out/" + strconv.Itoa(i) + ".bz2")
 		if err != nil {
 			log.Fatal(err)
 		}

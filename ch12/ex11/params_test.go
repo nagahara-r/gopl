@@ -1,60 +1,60 @@
+// Copyright © 2017 Yuki Nagahara
+
 package params
 
 import (
-	"log"
-	"math"
-	"strings"
+	"net/http"
+	"reflect"
 	"testing"
 )
 
-func TestPack(t *testing.T) {
+func TestPackAndUnpack(t *testing.T) {
 	url := "http://localhost:12345/search"
 
 	type S struct {
-		Lavels     []string `http:"l"`
-		MaxResults int      `http:"max"`
-		Exact      bool     `http:"x"`
+		ZipCode       int    `http:"zcode"`
+		MailAddress   string `http:"mail"`
+		CreditCardNum string `http:"credit"`
+		Other         []string
 	}
 	tests := []struct {
-		str      S
-		expected []string
+		str S
+		err error
 	}{
 		{
-			S{[]string{"a", "b", "c"}, 100, true},
-			[]string{"l=a", "l=b", "l=c", "max=100", "x=true"},
+			S{2430465, "test@example.com", "1234567890123456", []string{"Other Message1", "Message2"}},
+			nil,
 		}, {
-			S{[]string{}, math.MaxInt32, true},
-			[]string{"max=2147483647", "x=true"},
+			S{1234567, "", "1234567890123456", []string{""}},
+			nil,
 		}, {
-			S{nil, math.MinInt32, false},
-			[]string{"max=-2147483648", "x=false"},
+			S{1234567, "test@example.com", "", []string{""}},
+			nil,
+		}, {
+			S{2430465, "test@example.com", "1234567890123456", nil},
+			nil,
 		},
 	}
 
 	for _, test := range tests {
-		result := Pack(url, &test.str)
+		structToURL := Pack(url, &test.str)
 
-		if !isExpected(result, url, test.expected) {
-			t.Errorf("want = %v, result = %v", test.expected, result)
+		// HTTPリクエストにします
+		var result S
+		req, err := http.NewRequest("GET", structToURL, nil)
+		if err != nil {
+			t.Errorf("%v", err)
+		}
+
+		// HTTPリクエストをアンパックします
+		err = Unpack(req, &result)
+		if err != nil {
+			t.Errorf("%v", err)
+		}
+
+		// 元の構造体と同じか確認します
+		if !reflect.DeepEqual(test.str, result) {
+			t.Errorf("original(expected) = %v, result = %v", test.str, result)
 		}
 	}
-}
-
-func isExpected(result string, expectedurl string, expectedparams []string) bool {
-
-	// URLでスタートするか
-	if !strings.HasPrefix(result, expectedurl) {
-		log.Printf("Has No Url = %v\n", result)
-		return false
-	}
-
-	// すべての予期した要素を含むか
-	for _, expectedparam := range expectedparams {
-		if !strings.Contains(result, expectedparam) {
-			log.Printf("Has No Param = %v\n", expectedparam)
-			return false
-		}
-	}
-
-	return true
 }

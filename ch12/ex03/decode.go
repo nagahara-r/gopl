@@ -202,10 +202,11 @@ func read(lex *lexer, v reflect.Value) {
 		if lex.text() == "C" {
 			lex.next() // (
 			lex.next() // 1.00000
-			real, _ := strconv.ParseFloat(lex.text(), 64)
+			real := setFloat(lex)
 			lex.next() // ,
 			lex.next() // 2.00000
-			imag, _ := strconv.ParseFloat(lex.text(), 64)
+			imag := setFloat(lex)
+			//setNumber(lex.text(), lex, reflect.ValueOf(imag))
 			v.SetComplex(complex(real, imag))
 
 			lex.next()
@@ -224,12 +225,25 @@ func setNumber(str string, lex *lexer, v reflect.Value) {
 	switch lex.token {
 	case scanner.Int:
 		i, _ := strconv.ParseInt(str, 0, 64) // NOTE: ignoring errors
-		//i, _ := strconv.Atoi(lex.text()) // NOTE: ignoring errors
 		v.SetInt(int64(i))
 	case scanner.Float:
-		f, _ := strconv.ParseFloat(lex.text(), 64) // NOTE: ignoring errors
+		f, _ := strconv.ParseFloat(str, 64) // NOTE: ignoring errors
 		v.SetFloat(f)
 	}
+}
+
+func setFloat(lex *lexer) (f float64) {
+	var numstr string
+	switch lex.token {
+	case '-':
+		lex.next()
+		numstr = "-" + lex.text()
+	case scanner.Float:
+		numstr = lex.text()
+	}
+
+	f, _ = strconv.ParseFloat(numstr, 64) // NOTE: ignoring errors
+	return
 }
 
 //!-read

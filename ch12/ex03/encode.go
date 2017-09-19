@@ -2,7 +2,7 @@
 // License: https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 // Copyright © 2017 Yuki Nagahara
-// 練習12-3: float, complex, bool, chan, func, interface の実装をします。
+// 練習12-3: float, complex, bool, interface の実装をします。
 // 練習12-6: ゼロ値の場合はエンコーディングしないように修正します。
 // 練習12-13: フィールドタグを処理するように修正します。
 
@@ -14,6 +14,7 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"strconv"
 )
 
 //!+Marshal
@@ -111,10 +112,10 @@ func encode(buf *bytes.Buffer, v reflect.Value) error {
 		fmt.Fprintf(buf, "%v", v.Bool())
 
 	case reflect.Float32, reflect.Float64:
-		fmt.Fprintf(buf, "%f", v.Float())
+		fmt.Fprintf(buf, "%s", strconv.FormatFloat(v.Float(), 'f', 1000, 64))
 
 	case reflect.Complex64, reflect.Complex128:
-		fmt.Fprintf(buf, "#C(%f, %f)", real(v.Complex()), imag(v.Complex()))
+		fmt.Fprintf(buf, "#C(%s, %s)", strconv.FormatFloat(real(v.Complex()), 'f', 1000, 64), strconv.FormatFloat(imag(v.Complex()), 'f', 1000, 64))
 
 	case reflect.Interface:
 		fmt.Fprintf(buf, "#I(\"%s\" ", reflect.ValueOf(v.Interface()).Type())

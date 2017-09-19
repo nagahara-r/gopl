@@ -8,6 +8,7 @@ package sexpr
 import (
 	"math"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -73,7 +74,7 @@ func Test(t *testing.T) {
 
 	// Decode it
 	var movie Movie
-	if err := Unmarshal(data, &movie); err != nil {
+	if err = Unmarshal(data, &movie); err != nil {
 		t.Fatalf("Unmarshal failed: %v", err)
 	}
 	t.Logf("Unmarshal() = %+v\n", movie)
@@ -91,6 +92,80 @@ func Test(t *testing.T) {
 	t.Logf("MarshalIdent() = %s\n", data)
 }
 
+// 練習12-3, 12-10(Float)
+func TestFloat(t *testing.T) {
+	tests := []float64{
+		0, 1, 1.5, -100.2, math.MaxFloat64, math.SmallestNonzeroFloat64, math.SmallestNonzeroFloat64 * -1,
+	}
+
+	for _, test := range tests {
+		b, err := Marshal(test)
+		if err != nil {
+			t.Errorf("%v", err)
+		}
+		result := float64(0)
+		err = Unmarshal(b, &result)
+		if err != nil {
+			t.Errorf("%v", err)
+		}
+		if test != result {
+			t.Errorf("Parse result = %v, but expected %v", result, test)
+		}
+	}
+}
+
+// 練習12-3, 12-10(Complex)
+func TestComplex(t *testing.T) {
+	tests := []complex128{
+		complex(0, 0),
+		complex(0, 1),
+		complex(1.5, 2.3),
+		complex(-100.2, 5),
+		complex(math.MaxFloat64, math.MaxFloat64),
+		complex(math.SmallestNonzeroFloat64, math.SmallestNonzeroFloat64),
+	}
+
+	for _, test := range tests {
+		b, err := Marshal(test)
+		if err != nil {
+			t.Errorf("%v", err)
+		}
+
+		result := complex(0, 0)
+		err = Unmarshal(b, &result)
+		if err != nil {
+			t.Errorf("%v", err)
+		}
+		if test != result {
+			t.Errorf("Parse result = %v, but expected %v", result, test)
+		}
+	}
+}
+
+// 練習12-3, 12-10(Bool)
+func TestBool(t *testing.T) {
+	tests := []bool{
+		true, false,
+	}
+
+	for _, test := range tests {
+		b, err := Marshal(test)
+		if err != nil {
+			t.Errorf("%v", err)
+		}
+
+		var result bool
+		err = Unmarshal(b, &result)
+		if err != nil {
+			t.Errorf("%v", err)
+		}
+		if test != result {
+			t.Errorf("Parse result = %v, but expected %v", result, test)
+		}
+	}
+}
+
+// 練習12-3, 12-10 (interface)
 func TestInterface(t *testing.T) {
 	type IfTest struct {
 		// Generics
@@ -154,7 +229,7 @@ func TestInterface(t *testing.T) {
 
 	// Decode it
 	var ifTest IfTest
-	if err := Unmarshal(data, &ifTest); err != nil {
+	if err = Unmarshal(data, &ifTest); err != nil {
 		t.Fatalf("Unmarshal failed: %v", err)
 	}
 	t.Logf("Unmarshal()  = %+v\n", ifTest)
@@ -171,4 +246,71 @@ func TestInterface(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Logf("MarshalIdent() = %s\n", data)
+}
+
+// 練習12-6: ゼロ値をマーシャリングしない（アンマーシャリングも可能かどうかチェック）
+func TestZeroValue(t *testing.T) {
+	type teststruct struct {
+		ZeroBool    bool
+		ZeroInt     int
+		ZeroFloat   float64
+		ZeroComplex complex128
+		ZeroString  string
+		Non0Int     int
+	}
+	test := teststruct{}
+	test.Non0Int = 1
+
+	b, err := Marshal(test)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+
+	// "Zero" がつく要素がマーシャリングされていないか
+	if strings.Contains(string(b), "Zero") {
+		t.Errorf("ZeroValue Included: \n%v", string(b))
+	}
+
+	result := teststruct{}
+	err = Unmarshal(b, &result)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+	if !reflect.DeepEqual(test, result) {
+		t.Errorf("Parse result = %v, but expected %v", result, test)
+	}
+}
+
+// 練習12-13: フィールドタグ実装を確認
+func TestFieldTag(t *testing.T) {
+	type teststruct struct {
+		Field1 bool `sexpr:"thisisfield1"`
+		Field2 int  `sexpr:"-"` // ignoreing
+	}
+	test := teststruct{true, 100}
+	expected := teststruct{true, 0} // Field2 は無視してほしいのでUnmarshal後の期待はゼロ値
+
+	b, err := Marshal(test)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+
+	// "thisisfield1" がタグとして採用されているか
+	if !strings.Contains(string(b), "thisisfield1") {
+		t.Errorf("Field Tag not Used: \n%v", string(b))
+	}
+
+	// "Field2" が正しく無視されているか
+	if strings.Contains(string(b), "Field2") {
+		t.Errorf("Field ignoreing failed: \n%v", string(b))
+	}
+
+	result := teststruct{}
+	err = Unmarshal(b, &result)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+	if !reflect.DeepEqual(expected, result) {
+		t.Errorf("Parse result = %v, but expected %v", result, expected)
+	}
 }
